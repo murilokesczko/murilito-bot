@@ -114,7 +114,6 @@ client.once('ready', () => {
       canalPromo.send({ content: "@everyone Murilito lembra: apoiar nunca sai de moda 😎", embeds: [embed] });
     }
   }
-
   async function postarLojaFortnite() {
     if (canalPromo) {
       try {
@@ -176,4 +175,84 @@ client.once('ready', () => {
   // Agendamentos
   setInterval(() => {
     const agora = new Date();
-    if (agora.getHours() === 
+    if (agora.getHours() === 20 && agora.getMinutes() === 30) postarMensagemDiaria();
+  }, 60000);
+
+  setInterval(() => {
+    const agora = new Date();
+    if (agora.getHours() === 21 && agora.getMinutes() === 0) postarLojaFortnite();
+  }, 60000);
+
+  setInterval(() => {
+    const agora = new Date();
+    if (agora.getHours() === 19 && agora.getMinutes() === 0) postarEnqueteLoja();
+  }, 60000);
+
+  setInterval(postarFortnite, 600000);
+  setInterval(postarLibertyCity, 600000);
+  setInterval(postarRockstar, 600000);
+}); // <-- fecha o client.once('ready')
+
+
+// Interatividade e humor
+client.on('messageCreate', async (message) => {
+  if (message.author.bot) return;
+
+  // Comando de piada (aleatório)
+  if (message.content.toLowerCase() === '!piada') {
+    const piada = piadas[Math.floor(Math.random() * piadas.length)];
+    message.channel.send(piada);
+  }
+
+  // Comando de enquete manual
+  if (message.content.toLowerCase() === '!enquete') {
+    try {
+      const { data } = await axios.get('https://fortnite.gg/shop');
+      const $ = cheerio.load(data);
+      const itens = [];
+      $('.shop-section .shop-item').each((i, el) => {
+        const nome = $(el).find('.shop-item-name').text();
+        const preco = $(el).find('.shop-item-price').text();
+        const imagem = $(el).find('img').attr('src');
+        if (nome && imagem) itens.push({ nome, preco, imagem });
+      });
+      const selecionados = [];
+      while (selecionados.length < 3 && itens.length > 0) {
+        const index = Math.floor(Math.random() * itens.length);
+        selecionados.push(itens[index]);
+        itens.splice(index, 1);
+      }
+      await message.channel.send("📊 **Enquete da Loja Fortnite**\nVote na skin que você mais gostou!");
+      for (const item of selecionados) {
+        const embed = {
+          title: item.nome,
+          description: `💰 Preço: ${item.preco}\n🛒 Use o código **TIOKHREBIS** na loja!`,
+          color: 0x9b59b6,
+          image: { url: item.imagem }
+        };
+        const msg = await message.channel.send({ embeds: [embed] });
+        await msg.react("🔥");
+        await msg.react("👍");
+        await msg.react("😂");
+      }
+    } catch (err) {
+      console.error("Erro ao criar enquete manual:", err);
+      message.channel.send("❌ Ocorreu um erro ao tentar criar a enquete.");
+    }
+  }
+
+  // Resposta ao nome Murilito
+  if (message.content.toLowerCase().includes('murilito')) {
+    message.reply("👀 Chamou? Eu estava dormindo, mas já acordei!");
+  }
+
+  // Reações automáticas
+  if (message.content.toLowerCase().includes('fortnite')) {
+    message.react('🛒');
+  }
+  if (message.content.toLowerCase().includes('gta')) {
+    message.react('🚗');
+  }
+});
+
+client.login(process.env.TOKEN);
