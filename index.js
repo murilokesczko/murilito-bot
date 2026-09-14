@@ -149,7 +149,7 @@ async function traduzirGoogle(texto) {
 
     if (!resposta.ok) {
       throw new Error(
-        `Google Translate HTTP ${resposta.status}`
+        "Google Translate HTTP " + resposta.status
       );
     }
 
@@ -182,7 +182,6 @@ async function traduzirGoogle(texto) {
       erro.message
     );
 
-    // Se a tradução falhar, mantém o original.
     return texto;
   }
 }
@@ -788,8 +787,6 @@ async function publicarFortnite(
         noticia.descricao
       );
 
-    // Limita a descrição para não criar
-    // uma mensagem gigante no Discord.
     if (
       descricaoPT.length > 700
     ) {
@@ -985,7 +982,6 @@ async function processarFortnite() {
     return 0;
   }
 
-  // Publica no máximo 2 por ciclo.
   for (
     const noticia of noticias.slice(
       0,
