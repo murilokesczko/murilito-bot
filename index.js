@@ -123,7 +123,9 @@ client.once('ready', () => {
         for (const item of itens.slice(0, 5)) { // posta até 5 itens
           const nome = item.items[0].name;
           const preco = item.finalPrice;
-          const imagem = item.items[0].images.icon;
+          const imagem = item.items[0].images.icon 
+                      || item.items[0].images.featured 
+                      || item.items[0].images.smallIcon;
 
           const frase = frasesFortnite[Math.floor(Math.random() * frasesFortnite.length)];
 
@@ -160,7 +162,9 @@ client.once('ready', () => {
         for (const item of selecionados) {
           const nome = item.items[0].name;
           const preco = item.finalPrice;
-          const imagem = item.items[0].images.icon;
+          const imagem = item.items[0].images.icon 
+                      || item.items[0].images.featured 
+                      || item.items[0].images.smallIcon;
 
           const embed = {
             title: nome,
@@ -229,7 +233,9 @@ client.on('messageCreate', async (message) => {
       for (const item of selecionados) {
         const nome = item.items[0].name;
         const preco = item.finalPrice;
-        const imagem = item.items[0].images.icon;
+        const imagem = item.items[0].images.icon 
+                    || item.items[0].images.featured 
+                    || item.items[0].images.smallIcon;
 
         const embed = {
           title: nome,
