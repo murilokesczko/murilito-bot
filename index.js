@@ -1,6 +1,8 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const Parser = require('rss-parser');
+const axios = require('axios');
+const cheerio = require('cheerio');
 const parser = new Parser();
 
 const client = new Client({
@@ -42,7 +44,7 @@ const frasesFortnite = [
   "💸 Promoção imperdível: risadas grátis junto com a skin!",
   "Murilito recomenda: compre duas skins e ganhe uma piada!"
 ];
-// Funções de postagem com fallback
+// Funções de postagem com scraping
 async function postarFortnite(channel) {
   try {
     const feed = await parser.parseURL('https://fortnite.gg/news/rss');
@@ -51,15 +53,18 @@ async function postarFortnite(channel) {
       channel.send("❌ Não consegui buscar notícia de Fortnite. Veja direto em https://fortnite.gg/news");
       return;
     }
-    const frase = frasesFortnite[Math.floor(Math.random() * frasesFortnite.length)];
+
+    const response = await axios.get(noticia.link);
+    const $ = cheerio.load(response.data);
+    const textoCompleto = $('article').text().trim().slice(0, 1000);
+
     const embed = {
       title: noticia.title || "Notícia Fortnite",
       url: noticia.link || "https://fortnite.gg/news",
-      description: `📰 Use o CÓDIGO: **TIOKHREBIS**\n\n${noticia.content || noticia.contentSnippet || "Clique no link para ver mais!"}`,
+      description: `📰 Use o CÓDIGO: **TIOKHREBIS**\n\n${textoCompleto || noticia.contentSnippet || "Clique no link para ver mais!"}`,
       color: 0x1abc9c
     };
-    if (noticia.enclosure?.url) embed.image = { url: noticia.enclosure.url };
-    channel.send({ content: "@everyone " + frase, embeds: [embed] });
+    channel.send({ content: "@everyone Última notícia Fortnite:", embeds: [embed] });
   } catch (err) {
     console.error('Erro ao buscar Fortnite:', err);
     channel.send("❌ Erro ao buscar notícia de Fortnite. Veja direto em https://fortnite.gg/news");
@@ -74,15 +79,18 @@ async function postarLibertyCity(channel) {
       channel.send("❌ Não consegui buscar notícia de LibertyCity. Veja direto em https://pt.libertycity.net/news");
       return;
     }
-    const frase = frasesGTA[Math.floor(Math.random() * frasesGTA.length)];
+
+    const response = await axios.get(noticia.link);
+    const $ = cheerio.load(response.data);
+    const textoCompleto = $('article').text().trim().slice(0, 1000);
+
     const embed = {
       title: noticia.title || "Notícia LibertyCity",
       url: noticia.link || "https://pt.libertycity.net/news",
-      description: `🚗 Nova notícia de GTA (LibertyCity)\n\n${noticia.content || noticia.contentSnippet || "Clique no link para ver mais!"}`,
+      description: `🚗 Nova notícia de GTA (LibertyCity)\n\n${textoCompleto || noticia.contentSnippet || "Clique no link para ver mais!"}`,
       color: 0xe74c3c
     };
-    if (noticia.enclosure?.url) embed.image = { url: noticia.enclosure.url };
-    channel.send({ content: "@everyone " + frase, embeds: [embed] });
+    channel.send({ content: "@everyone Última notícia LibertyCity:", embeds: [embed] });
   } catch (err) {
     console.error('Erro ao buscar LibertyCity:', err);
     channel.send("❌ Erro ao buscar notícia de LibertyCity. Veja direto em https://pt.libertycity.net/news");
@@ -97,15 +105,18 @@ async function postarRockstar(channel) {
       channel.send("❌ Não consegui buscar notícia da Rockstar. Veja direto em https://www.rockstargames.com/br/newswire");
       return;
     }
-    const frase = frasesGTA[Math.floor(Math.random() * frasesGTA.length)];
+
+    const response = await axios.get(noticia.link);
+    const $ = cheerio.load(response.data);
+    const textoCompleto = $('article').text().trim().slice(0, 1000);
+
     const embed = {
       title: noticia.title || "Notícia Rockstar",
       url: noticia.link || "https://www.rockstargames.com/br/newswire",
-      description: `🚗 Nova notícia de GTA (Rockstar Newswire)\n\n${noticia.content || noticia.contentSnippet || "Clique no link para ver mais!"}`,
+      description: `🚗 Nova notícia de GTA (Rockstar Newswire)\n\n${textoCompleto || noticia.contentSnippet || "Clique no link para ver mais!"}`,
       color: 0xf1c40f
     };
-    if (noticia.enclosure?.url) embed.image = { url: noticia.enclosure.url };
-    channel.send({ content: "@everyone " + frase, embeds: [embed] });
+    channel.send({ content: "@everyone Última notícia Rockstar:", embeds: [embed] });
   } catch (err) {
     console.error('Erro ao buscar Rockstar:', err);
     channel.send("❌ Erro ao buscar notícia da Rockstar. Veja direto em https://www.rockstargames.com/br/newswire");
