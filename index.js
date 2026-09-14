@@ -11,17 +11,7 @@ const client = new Client({
   ]
 });
 
-// Piadas e frases
-const piadas = [
-  "Por que o carro do GTA nunca quebra? Porque é blindado contra bugs 😂",
-  "Fortnite sem construção é tipo pizza sem queijo 🍕",
-  "Murilito entrou na loja... e saiu sem V-Bucks 😭",
-  "Breaking News: Murilito ainda não ganhou na loteria 🎰",
-  "CJ disse: 'Ah, lá vamos nós de novo...' 🎮",
-  "Essa skin parece que saiu de um churrasco de domingo 😂",
-  "Murilito recomenda: compre duas skins e ganhe uma piada!"
-];
-
+// Frases divertidas
 const frasesGTA = [
   "🚗 Essa notícia é mais quente que o motor do CJ!",
   "🔥 Rockstar soltando novidade, segura o hype!",
@@ -34,16 +24,6 @@ const frasesFortnite = [
   "Murilito recomenda: compre duas skins e ganhe uma piada!"
 ];
 
-// Lista fixa de skins (nome, preço, imagem)
-const skinsFixas = [
-  { nome: "Renegade Raider", preco: 1200, imagem: "https://i.imgur.com/renegade.png" },
-  { nome: "Black Knight", preco: 2000, imagem: "https://i.imgur.com/blackknight.png" },
-  { nome: "Peely", preco: 1500, imagem: "https://i.imgur.com/peely.png" },
-  { nome: "Drift", preco: 1800, imagem: "https://i.imgur.com/drift.png" },
-  { nome: "Midas", preco: 2000, imagem: "https://i.imgur.com/midas.png" },
-  { nome: "Skull Trooper", preco: 1200, imagem: "https://i.imgur.com/skulltrooper.png" }
-];
-
 client.once('ready', () => {
   console.log(`✅ Murilito NEWS conectado como ${client.user.tag}`);
 
@@ -51,13 +31,11 @@ client.once('ready', () => {
   const canalFortnite = client.channels.cache.get("1517339263216390164");
   const canalGTA = client.channels.cache.get("1520508956978712576");
   const canalPromo = client.channels.cache.get("1517333302032470191");
-  const canalEnquete = client.channels.cache.get("732400317282517043");
 
   // Mensagem de teste ao reiniciar
   canalFortnite?.send("🤖 Murilito reiniciou! Teste de postagem no canal Fortnite.");
   canalGTA?.send("🤖 Murilito reiniciou! Teste de postagem no canal GTA.");
   canalPromo?.send("🤖 Murilito reiniciou! Teste de postagem no canal Promoções.");
-  canalEnquete?.send("🤖 Murilito reiniciou! Teste de postagem no canal Enquetes.");
 
   // Funções de postagem de notícias
   async function postarFortnite() {
@@ -111,70 +89,30 @@ client.once('ready', () => {
     } catch (err) { console.error('Erro ao buscar Rockstar:', err); }
   }
 
-  function postarMensagemDiaria() {
-    if (canalPromo) {
-      const embed = {
-        title: "🎯 Apoie com o código TIOKHREBIS 🎯",
-        description: "🛒 **Quando for comprar algo na loja do Fortnite, use o código: TIOKHREBIS**\n\nApoie o Tio Khrebis e fortaleça a comunidade!",
-        color: 0x3498db,
-        image: { url: "https://cdn.discordapp.com/attachments/1517333302032470191/1548861867429208105/Copilot_20260913_220355.png" }
-      };
-      canalPromo.send({ content: "@everyone Murilito lembra: apoiar nunca sai de moda 😎", embeds: [embed] });
-    }
-  }
-  // Função para postar loja fixa às 21h
+  // Função para postar loja (link direto)
   async function postarLojaFortnite() {
     if (canalPromo) {
-      try {
-        for (const item of skinsFixas.slice(0, 5)) { // posta até 5 skins
-          const frase = frasesFortnite[Math.floor(Math.random() * frasesFortnite.length)];
-          const embed = {
-            title: item.nome,
-            description: `💰 Preço: ${item.preco} V-Bucks\n🛒 Use o código **TIOKHREBIS** na loja!`,
-            color: 0x2ecc71,
-            image: { url: item.imagem }
-          };
-          canalPromo.send({ content: "@everyone 🛍️ **Loja Fortnite Atualizada!**\n" + frase, embeds: [embed] });
-        }
-      } catch (err) { console.error("Erro ao postar loja fixa:", err); }
-    }
-  }
-
-  // Função para postar enquete fixa às 19h
-  async function postarEnqueteLoja() {
-    if (canalEnquete) {
-      try {
-        // Sorteia 3 skins aleatórias da lista fixa
-        const selecionados = [];
-        const copia = [...skinsFixas];
-        while (selecionados.length < 3 && copia.length > 0) {
-          const index = Math.floor(Math.random() * copia.length);
-          selecionados.push(copia[index]);
-          copia.splice(index, 1);
-        }
-
-        canalEnquete.send("📊 **Enquete da Loja Fortnite**\nVote na skin que você mais gostou!");
-
-        for (const item of selecionados) {
-          const embed = {
-            title: item.nome,
-            description: `💰 Preço: ${item.preco} V-Bucks\n🛒 Use o código **TIOKHREBIS** na loja!`,
-            color: 0x9b59b6,
-            image: { url: item.imagem }
-          };
-          const msg = await canalEnquete.send({ embeds: [embed] });
-          await msg.react("🔥");
-          await msg.react("👍");
-          await msg.react("😂");
-        }
-      } catch (err) { console.error("Erro ao criar enquete fixa:", err); }
+      const embed = {
+        title: "🛍️ Loja Fortnite Atualizada!",
+        description: "Clique no link abaixo para ver todas as skins da loja de hoje:\n\n👉 [Ver Loja no Fortnite.gg](https://fortnite.gg/shop)\n\n🛒 Não esqueça de usar o código **TIOKHREBIS** na loja!",
+        color: 0x2ecc71,
+        image: { url: "https://fortnite.gg/img/shop.jpg" }
+      };
+      canalPromo.send({ content: "@everyone Loja Fortnite disponível!", embeds: [embed] });
     }
   }
 
   // Agendamentos
   setInterval(() => {
     const agora = new Date();
-    if (agora.getHours() === 20 && agora.getMinutes() === 30) postarMensagemDiaria();
+    if (agora.getHours() === 20 && agora.getMinutes() === 30) {
+      const embed = {
+        title: "🎯 Apoie com o código TIOKHREBIS 🎯",
+        description: "🛒 **Quando for comprar algo na loja do Fortnite, use o código: TIOKHREBIS**\n\nApoie o Tio Khrebis e fortaleça a comunidade!",
+        color: 0x3498db
+      };
+      canalPromo.send({ content: "@everyone Murilito lembra: apoiar nunca sai de moda 😎", embeds: [embed] });
+    }
   }, 60000);
 
   setInterval(() => {
@@ -182,62 +120,24 @@ client.once('ready', () => {
     if (agora.getHours() === 21 && agora.getMinutes() === 0) postarLojaFortnite();
   }, 60000);
 
-  setInterval(() => {
-    const agora = new Date();
-    if (agora.getHours() === 19 && agora.getMinutes() === 0) postarEnqueteLoja();
-  }, 60000);
-
   setInterval(postarFortnite, 600000);
   setInterval(postarLibertyCity, 600000);
   setInterval(postarRockstar, 600000);
-}); // fecha client.once('ready')
+});
 
-
-// Interatividade e humor
+// Interatividade
 client.on('messageCreate', async (message) => {
   if (message.author.bot) return;
 
-  // Comando de piada (aleatório)
-  if (message.content.toLowerCase() === '!piada') {
-    const piada = piadas[Math.floor(Math.random() * piadas.length)];
-    message.channel.send(piada);
-  }
-
-  // Comando de enquete manual
-  if (message.content.toLowerCase() === '!enquete') {
-    try {
-      // Sorteia 3 skins aleatórias da lista fixa
-      const selecionados = [];
-      const copia = [...skinsFixas];
-      while (selecionados.length < 3 && copia.length > 0) {
-        const index = Math.floor(Math.random() * copia.length);
-        selecionados.push(copia[index]);
-        copia.splice(index, 1);
-      }
-
-      await message.channel.send("📊 **Enquete da Loja Fortnite**\nVote na skin que você mais gostou!");
-
-      for (const item of selecionados) {
-        const embed = {
-          title: item.nome,
-          description: `💰 Preço: ${item.preco} V-Bucks\n🛒 Use o código **TIOKHREBIS** na loja!`,
-          color: 0x9b59b6,
-          image: { url: item.imagem }
-        };
-        const msg = await message.channel.send({ embeds: [embed] });
-        await msg.react("🔥");
-        await msg.react("👍");
-        await msg.react("😂");
-      }
-    } catch (err) {
-      console.error("Erro ao criar enquete manual:", err);
-      message.channel.send("❌ Ocorreu um erro ao tentar criar a enquete.");
-    }
-  }
-
-  // Resposta ao nome Murilito
-  if (message.content.toLowerCase().includes('murilito')) {
-    message.reply("👀 Chamou? Eu estava dormindo, mas já acordei!");
+  // Comando de teste
+  if (message.content.toLowerCase() === '!teste') {
+    await message.channel.send("🔎 Testando Murilito... Últimas notícias:");
+    await message.channel.send("➡️ Fortnite:");
+    await postarFortnite();
+    await message.channel.send("➡️ LibertyCity:");
+    await postarLibertyCity();
+    await message.channel.send("➡️ Rockstar:");
+    await postarRockstar();
   }
 
   // Reações automáticas
