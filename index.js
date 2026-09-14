@@ -107,186 +107,88 @@ function normalizarUrl(url) {
 }
 
 // ======================================================
-// TRADUÇÃO GOOGLE — NOVO MÉTODO
+// MYMEMORY — TRADUÇÃO
 // ======================================================
 
-async function traduzirGoogleAlternativo(texto) {
+async function traduzirMyMemory(texto) {
   if (!texto) return "";
 
-  const textoLimpo = String(texto).trim();
+  const textoOriginal = String(texto).trim();
 
-  if (!textoLimpo) return "";
+  if (!textoOriginal) return "";
 
   try {
-    console.log(
-      "🌐 Google Translate alternativo: enviando texto..."
-    );
+    console.log("🌐 MyMemory: enviando texto para tradução...");
 
     const url =
-      "https://clients5.google.com/translate_a/t" +
-      "?client=dict-chrome-ex" +
-      "&sl=auto" +
-      "&tl=pt" +
-      "&q=" +
-      encodeURIComponent(textoLimpo);
+      "https://api.mymemory.translated.net/get" +
+      "?q=" +
+      encodeURIComponent(textoOriginal) +
+      "&langpair=en|pt-BR";
 
     const resposta = await fetch(url, {
       method: "GET",
       headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
-        "Accept":
-          "application/json,text/plain,*/*",
+        "User-Agent": "MurilitoNEWS/1.0",
+        "Accept": "application/json",
       },
     });
 
     console.log(
-      "🌐 Google Translate alternativo HTTP: " +
-      resposta.status
+      "🌐 MyMemory HTTP: " + resposta.status
     );
 
     if (!resposta.ok) {
       throw new Error(
-        "HTTP " +
-        resposta.status
+        "MyMemory HTTP " + resposta.status
       );
     }
 
-    const dados =
-      await resposta.json();
+    const dados = await resposta.json();
 
     console.log(
-      "📦 Resposta recebida do Google alternativo."
+      "📦 MyMemory respondeu."
     );
 
     if (
       !dados ||
-      !Array.isArray(dados.sentences)
+      !dados.responseData ||
+      !dados.responseData.translatedText
     ) {
       console.log(
-        "❌ Resposta inesperada:",
-        JSON.stringify(dados).slice(0, 500)
+        "❌ Resposta MyMemory inválida:"
+      );
+
+      console.log(
+        JSON.stringify(dados).slice(0, 1000)
       );
 
       throw new Error(
-        "Formato de resposta inesperado."
+        "MyMemory não retornou translatedText."
       );
     }
 
     const traduzido =
-      dados.sentences
-        .map(function (item) {
-          return item.trans || "";
-        })
-        .filter(Boolean)
-        .join("");
+      String(
+        dados.responseData.translatedText
+      ).trim();
 
     if (!traduzido) {
       throw new Error(
-        "Google não retornou tradução."
+        "MyMemory retornou tradução vazia."
       );
     }
 
     console.log(
-      "🇧🇷 Tradução Google alternativa: " +
-      traduzido.slice(0, 250)
+      "🇧🇷 MyMemory: " +
+      traduzido.slice(0, 300)
     );
 
-    return traduzido.trim();
+    return traduzido;
 
   } catch (erro) {
     console.log(
-      "⚠️ Google alternativo falhou:",
-      erro.message
-    );
-
-    return "";
-  }
-}
-
-// ======================================================
-// TRADUÇÃO GOOGLE — MÉTODO ANTIGO DE RESERVA
-// ======================================================
-
-async function traduzirGoogleAntigo(texto) {
-  if (!texto) return "";
-
-  const textoLimpo = String(texto).trim();
-
-  if (!textoLimpo) return "";
-
-  try {
-    console.log(
-      "🌐 Tentando Google Translate método reserva..."
-    );
-
-    const url =
-      "https://translate.googleapis.com/translate_a/single" +
-      "?client=gtx" +
-      "&sl=auto" +
-      "&tl=pt" +
-      "&dt=t" +
-      "&q=" +
-      encodeURIComponent(textoLimpo);
-
-    const resposta = await fetch(url, {
-      method: "GET",
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0",
-        "Accept":
-          "application/json,text/plain,*/*",
-      },
-    });
-
-    console.log(
-      "🌐 Google reserva HTTP: " +
-      resposta.status
-    );
-
-    if (!resposta.ok) {
-      throw new Error(
-        "HTTP " +
-        resposta.status
-      );
-    }
-
-    const dados =
-      await resposta.json();
-
-    if (
-      !Array.isArray(dados) ||
-      !Array.isArray(dados[0])
-    ) {
-      throw new Error(
-        "Resposta inválida."
-      );
-    }
-
-    const traduzido =
-      dados[0]
-        .map(function (parte) {
-          return parte[0];
-        })
-        .filter(Boolean)
-        .join("");
-
-    if (!traduzido) {
-      throw new Error(
-        "Nenhuma tradução retornada."
-      );
-    }
-
-    console.log(
-      "🇧🇷 Tradução reserva: " +
-      traduzido.slice(0, 250)
-    );
-
-    return traduzido.trim();
-
-  } catch (erro) {
-    console.log(
-      "⚠️ Google reserva falhou:",
+      "⚠️ Erro MyMemory:",
       erro.message
     );
 
@@ -301,54 +203,37 @@ async function traduzirGoogleAntigo(texto) {
 async function traduzirGoogle(texto) {
   if (!texto) return "";
 
-  const textoOriginal =
+  const original =
     String(texto).trim();
 
-  if (!textoOriginal) return "";
+  if (!original) return "";
 
-  // PRIMEIRA TENTATIVA
-  const primeira =
-    await traduzirGoogleAlternativo(
-      textoOriginal
-    );
+  const traduzido =
+    await traduzirMyMemory(original);
 
   if (
-    primeira &&
-    primeira.trim() &&
-    primeira.trim().toLowerCase() !==
-      textoOriginal.trim().toLowerCase()
+    traduzido &&
+    traduzido.toLowerCase() !==
+      original.toLowerCase()
   ) {
     console.log(
-      "✅ Tradução concluída pelo Google alternativo."
+      "✅ Tradução concluída pelo MyMemory."
     );
 
-    return primeira.trim();
+    return traduzido;
   }
 
-  // SEGUNDA TENTATIVA
-  const segunda =
-    await traduzirGoogleAntigo(
-      textoOriginal
-    );
-
-  if (
-    segunda &&
-    segunda.trim() &&
-    segunda.trim().toLowerCase() !==
-      textoOriginal.trim().toLowerCase()
-  ) {
+  if (traduzido) {
     console.log(
-      "✅ Tradução concluída pelo Google reserva."
+      "⚠️ MyMemory retornou o mesmo texto original."
     );
-
-    return segunda.trim();
   }
 
   console.log(
-    "⚠️ Nenhum método conseguiu traduzir. Mantendo original."
+    "⚠️ Mantendo texto original."
   );
 
-  return textoOriginal;
+  return original;
 }
 
 // ======================================================
@@ -454,7 +339,6 @@ async function publicarGTA(
       );
 
     if (!canal) return false;
-
     if (!noticia.link) return false;
 
     if (!forcar) {
@@ -1236,7 +1120,7 @@ async function executarTesteTraducao(
 ) {
   try {
     await canalResposta.send(
-      "🧪 **Testando Google Translate alternativo...**\n" +
+      "🧪 **Testando MyMemory...**\n" +
       "Aguarde alguns segundos."
     );
 
@@ -1249,7 +1133,7 @@ async function executarTesteTraducao(
     );
 
     console.log(
-      "🧪 TESTE GOOGLE TRANSLATE ALTERNATIVO"
+      "🧪 TESTE MYMEMORY"
     );
 
     console.log(
@@ -1262,13 +1146,16 @@ async function executarTesteTraducao(
     );
 
     const traduzido =
-      await traduzirGoogle(
+      await traduzirMyMemory(
         original
       );
 
     console.log(
-      "🇧🇷 Resultado final: " +
-      traduzido
+      "🇧🇷 Resultado: " +
+      (
+        traduzido ||
+        "(vazio)"
+      )
     );
 
     console.log(
@@ -1276,34 +1163,35 @@ async function executarTesteTraducao(
     );
 
     if (
+      !traduzido ||
       traduzido.trim().toLowerCase() ===
-      original.trim().toLowerCase()
+        original.trim().toLowerCase()
     ) {
       await canalResposta.send(
-        "❌ **Ainda não conseguiu traduzir.**\n\n" +
-        "O Google retornou o texto original.\n\n" +
-        "Me mande o log do Railway que aparece depois de `TESTE GOOGLE TRANSLATE ALTERNATIVO`."
+        "❌ **O MyMemory não conseguiu traduzir.**\n\n" +
+        "Veja o console do Railway para conferir o HTTP e a resposta."
       );
 
-    } else {
-      await canalResposta.send(
-        "✅ **TRADUÇÃO FUNCIONOU!**\n\n" +
-        "🇺🇸 **Original:**\n" +
-        original +
-        "\n\n" +
-        "🇧🇷 **Português:**\n" +
-        traduzido
-      );
+      return;
     }
+
+    await canalResposta.send(
+      "✅ **TRADUÇÃO FUNCIONOU!**\n\n" +
+      "🇺🇸 **Original:**\n" +
+      original +
+      "\n\n" +
+      "🇧🇷 **Português:**\n" +
+      traduzido
+    );
 
   } catch (erro) {
     console.log(
-      "❌ Erro no teste:",
+      "❌ Erro no teste MyMemory:",
       erro.message
     );
 
     await canalResposta.send(
-      "❌ **Erro no teste de tradução:**\n" +
+      "❌ **Erro no teste MyMemory:**\n" +
       erro.message
     );
   }
@@ -1351,14 +1239,18 @@ async function executarTesteFortnite(
     );
 
     const tituloPT =
-      await traduzirGoogle(
+      await traduzirMyMemory(
         primeira.titulo
       );
 
-    let descricaoPT =
-      await traduzirGoogle(
-        primeira.descricao
-      );
+    let descricaoPT = "";
+
+    if (primeira.descricao) {
+      descricaoPT =
+        await traduzirMyMemory(
+          primeira.descricao
+        );
+    }
 
     if (
       descricaoPT.length > 700
@@ -1382,7 +1274,10 @@ async function executarTesteFortnite(
     mensagem =
       mensagem +
       "🇧🇷 **" +
-      tituloPT +
+      (
+        tituloPT ||
+        primeira.titulo
+      ) +
       "**\n\n";
 
     if (descricaoPT) {
@@ -1614,7 +1509,7 @@ client.on(
       return;
     }
 
-    // AJUDA DE TESTES
+    // AJUDA
 
     if (
       texto ===
@@ -1622,7 +1517,7 @@ client.on(
     ) {
       await message.channel.send(
         "🧪 **Testes disponíveis:**\n\n" +
-        "`!teste traducao` → testa Google Translate\n" +
+        "`!teste traducao` → testa MyMemory\n" +
         "`!teste fortnite` → testa RSS + tradução\n" +
         "`!teste rockstar` → publica uma notícia Rockstar\n" +
         "`!teste liberty` → publica uma notícia LibertyCity\n" +
