@@ -6,7 +6,6 @@ const {
   EmbedBuilder
 } = require("discord.js");
 
-const axios = require("axios");
 const puppeteer = require("puppeteer");
 
 
@@ -314,7 +313,7 @@ async function publicarNoticia(tipo, noticia) {
       );
 
 
-  // GTA continua podendo usar imagem.
+  // GTA continua usando imagem.
   if (
     !ehFortnite &&
     urlValida(noticia.image)
@@ -497,34 +496,27 @@ async function buscarNoticiasFortnite() {
     "🔎 Fortnite: procurando notícias no Fortnite.GG..."
   );
 
-
   let page = null;
-
 
   try {
 
-    page =
-      await novaPagina();
-
+    page = await novaPagina();
 
     console.log(
       "🌐 Fortnite.GG abrindo: " +
       FORTNITE_GG
     );
 
+    const response = await page.goto(
+      FORTNITE_GG,
+      {
+        waitUntil:
+          "domcontentloaded",
 
-    const response =
-      await page.goto(
-        FORTNITE_GG,
-        {
-          waitUntil:
-            "domcontentloaded",
-
-          timeout:
-            45000
-        }
-      );
-
+        timeout:
+          45000
+      }
+    );
 
     if (response) {
 
@@ -534,10 +526,9 @@ async function buscarNoticiasFortnite() {
       );
     }
 
-
     await new Promise(
       resolve =>
-        setTimeout(resolve, 2500)
+        setTimeout(resolve, 4000)
     );
 
 
@@ -552,8 +543,14 @@ async function buscarNoticiasFortnite() {
 
         const links =
           Array.from(
-            document.querySelectorAll("a")
+            document.querySelectorAll("a[href]")
           );
+
+
+        console.log(
+          "Links encontrados na página:",
+          links.length
+        );
 
 
         for (
@@ -561,8 +558,9 @@ async function buscarNoticiasFortnite() {
           of links
         ) {
 
-          const href =
-            a.href || "";
+          let href =
+            a.getAttribute("href") ||
+            "";
 
 
           const titulo =
@@ -581,36 +579,62 @@ async function buscarNoticiasFortnite() {
           }
 
 
+          // Converte links relativos
+          try {
+
+            href =
+              new URL(
+                href,
+                "https://fortnite.gg/"
+              ).href;
+
+          } catch {
+
+            continue;
+          }
+
+
+          // Só links de notícias
           if (
-            !href.startsWith(
-              "https://fortnite.gg/news/"
+            !href.includes(
+              "fortnite.gg/news"
             )
           ) {
             continue;
           }
 
 
+          // Não aceitar a página principal
           if (
             href ===
-            "https://fortnite.gg/news/"
+              "https://fortnite.gg/news" ||
+            href ===
+              "https://fortnite.gg/news/"
           ) {
             continue;
           }
 
 
+          // Título muito pequeno
           if (
-            titulo.length < 5
+            titulo.length < 8
           ) {
             continue;
           }
 
 
+          const tituloLower =
+            titulo.toLowerCase();
+
+
+          // Ignora navegação
           if (
-            titulo === "Fortnite News" ||
-            titulo === "Play Now" ||
-            titulo === "Check it Out" ||
-            titulo === "Check Them Out" ||
-            titulo === "Compete Now"
+            tituloLower === "news" ||
+            tituloLower === "notícias" ||
+            tituloLower === "next" ||
+            tituloLower === "previous" ||
+            tituloLower === "próxima" ||
+            tituloLower === "anterior"
           ) {
             continue;
           }
@@ -658,8 +682,25 @@ async function buscarNoticiasFortnite() {
     );
 
 
+    // Mostra os primeiros resultados no Railway
+    for (
+      const noticia
+      of noticias.slice(0, 5)
+    ) {
+
+      console.log(
+        "🎮 Fortnite:",
+        noticia.title
+      );
+
+      console.log(
+        "🔗:",
+        noticia.link
+      );
+    }
+
+
     if (
-      noticias &&
       noticias.length > 0
     ) {
 
@@ -667,25 +708,66 @@ async function buscarNoticiasFortnite() {
         "✅ Fortnite: fonte funcionando!"
       );
 
-
-      console.log(
-        "📰 Primeira notícia:",
-        noticias[0].title
-      );
-
-
-      console.log(
-        "🔗:",
-        noticias[0].link
-      );
-
-
       return noticias;
     }
 
 
+    // ========================================================
+    // DEBUG
+    // ========================================================
+
     console.log(
-      "⚠️ Fortnite.GG respondeu, mas nenhum link de notícia foi encontrado."
+      "⚠️ Nenhum link de notícia encontrado."
+    );
+
+    console.log(
+      "🔍 Procurando qualquer link relacionado a /news..."
+    );
+
+
+    const linksDebug =
+      await page.evaluate(() => {
+
+        return Array.from(
+          document.querySelectorAll(
+            "a[href]"
+          )
+        )
+        .map(a => ({
+
+          href:
+            a.getAttribute("href"),
+
+          texto:
+            (a.innerText || "")
+              .replace(/\s+/g, " ")
+              .trim()
+
+        }))
+        .filter(item =>
+          item.href &&
+          (
+            item.href
+              .toLowerCase()
+              .includes("news") ||
+
+            item.texto
+              .toLowerCase()
+              .includes("news")
+          )
+        )
+        .slice(0, 20);
+
+      });
+
+
+    console.log(
+      "🔍 Links encontrados no modo DEBUG:",
+      JSON.stringify(
+        linksDebug,
+        null,
+        2
+      )
     );
 
 
@@ -698,7 +780,6 @@ async function buscarNoticiasFortnite() {
       "❌ Fortnite.GG falhou:",
       erro.message
     );
-
 
     return [];
 
@@ -958,7 +1039,6 @@ async function buscarNoticiasLibertyCity() {
 
     return unicas;
 
-
   } catch (erro) {
 
     console.log(
@@ -968,7 +1048,6 @@ async function buscarNoticiasLibertyCity() {
 
 
     return [];
-
 
   } finally {
 
@@ -1223,7 +1302,6 @@ async function buscarNoticiasRockstar() {
 
     return unicas;
 
-
   } catch (erro) {
 
     console.log(
@@ -1233,7 +1311,6 @@ async function buscarNoticiasRockstar() {
 
 
     return [];
-
 
   } finally {
 
@@ -1275,6 +1352,7 @@ async function processarNoticias(
   let publicadas = 0;
 
 
+  // Máximo 3 por ciclo.
   const limite =
     noticias.slice(0, 3);
 
@@ -1445,14 +1523,12 @@ async function cicloNoticias() {
       "📰 CICLO FINALIZADO"
     );
 
-
   } catch (erro) {
 
     console.log(
       "❌ Erro geral no ciclo:",
       erro.message
     );
-
 
   } finally {
 
@@ -1537,7 +1613,6 @@ async function publicarLoja() {
     console.log(
       "🛒 Loja do Fortnite publicada."
     );
-
 
   } catch (erro) {
 
@@ -1753,7 +1828,6 @@ async function testeLoja() {
     console.log(
       "🧪 Teste da loja enviado."
     );
-
 
   } catch (erro) {
 
