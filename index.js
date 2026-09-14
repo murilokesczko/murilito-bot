@@ -1,6 +1,8 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const Parser = require('rss-parser');
+const axios = require('axios');
+const cheerio = require('cheerio');
 const parser = new Parser();
 
 const client = new Client({
@@ -20,15 +22,9 @@ client.once('ready', () => {
   const canalPromo = client.channels.cache.get("1517333302032470191");
 
   // Mensagens de teste ao iniciar
-  if (canalFortnite) {
-    canalFortnite.send("@everyone ✅ Teste: Murilito NEWS está funcionando e pronto pra postar notícias de Fortnite!");
-  }
-  if (canalGTA) {
-    canalGTA.send("@everyone ✅ Teste: Murilito NEWS está funcionando e pronto pra postar notícias de GTA!");
-  }
-  if (canalPromo) {
-    canalPromo.send("@everyone ✅ Teste: Mensagem diária configurada!");
-  }
+  if (canalFortnite) canalFortnite.send("@everyone ✅ Teste: Murilito NEWS pronto para Fortnite!");
+  if (canalGTA) canalGTA.send("@everyone ✅ Teste: Murilito NEWS pronto para GTA!");
+  if (canalPromo) canalPromo.send("@everyone ✅ Teste: Promoções e Loja configuradas!");
 
   // Função para postar notícias do Fortnite
   async function postarFortnite() {
@@ -45,7 +41,6 @@ client.once('ready', () => {
       };
 
       canalFortnite.send({ content: "@everyone", embeds: [embed] });
-      console.log(`Fortnite postada: ${noticia.title}`);
     } catch (err) {
       console.error('Erro ao buscar Fortnite:', err);
     }
@@ -66,7 +61,6 @@ client.once('ready', () => {
       };
 
       canalGTA.send({ content: "@everyone", embeds: [embed] });
-      console.log(`LibertyCity postada: ${noticia.title}`);
     } catch (err) {
       console.error('Erro ao buscar LibertyCity:', err);
     }
@@ -87,7 +81,6 @@ client.once('ready', () => {
       };
 
       canalGTA.send({ content: "@everyone", embeds: [embed] });
-      console.log(`Rockstar postada: ${noticia.title}`);
     } catch (err) {
       console.error('Erro ao buscar Rockstar:', err);
     }
@@ -98,33 +91,60 @@ client.once('ready', () => {
     if (canalPromo) {
       const embed = {
         title: "🎯 Apoie com o código TIOKHREBIS 🎯",
-        description: "🛒 **Quando for comprar algo na loja do Fortnite, use o código: TIOKHREBIS**\n\nApoie o Murilo NEWS e fortaleça a comunidade!",
+        description: "🛒 **Quando for comprar algo na loja do Fortnite, use o código: TIOKHREBIS**\n\nApoie o Tio Khrebis e fortaleça a comunidade!",
         color: 0x3498db,
         image: { 
           url: "https://cdn.discordapp.com/attachments/1517333302032470191/1548861867429208105/Copilot_20260913_220355.png?ex=6aa89985&is=6aa74805&hm=0d44f5d41193443ea3ed485fc515e014d09ebe7ae6a94005493fcb8e0a8c817c&"
         }
       };
       canalPromo.send({ content: "@everyone", embeds: [embed] });
-      console.log("Mensagem diária enviada!");
     }
   }
 
-  // Agendar para 20:30 todos os dias
-  function agendarMensagemDiaria() {
-    setInterval(() => {
-      const agora = new Date();
-      const horas = agora.getHours();
-      const minutos = agora.getMinutes();
+  // Função para postar loja do Fortnite às 21:00
+  async function postarLojaFortnite() {
+    if (canalPromo) {
+      try {
+        const { data } = await axios.get('https://fortnite.gg/shop');
+        const $ = cheerio.load(data);
 
-      if (horas === 20 && minutos === 30) {
-        postarMensagemDiaria();
+        $('.shop-section .shop-item').each((i, el) => {
+          const nome = $(el).find('.shop-item-name').text();
+          const preco = $(el).find('.shop-item-price').text();
+          const imagem = $(el).find('img').attr('src');
+
+          const embed = {
+            title: nome,
+            description: `💰 Preço: ${preco}\n🛒 Use o código **TIOKHREBIS** na loja!`,
+            color: 0x2ecc71,
+            image: { url: imagem }
+          };
+
+          canalPromo.send({ content: "@everyone 🛍️ **Loja Fortnite Atualizada!**", embeds: [embed] });
+        });
+      } catch (err) {
+        console.error("Erro ao buscar loja Fortnite:", err);
       }
-    }, 60000); // checa a cada minuto
+    }
   }
 
-  agendarMensagemDiaria();
+  // Agendamento para 20:30 (mensagem diária)
+  setInterval(() => {
+    const agora = new Date();
+    if (agora.getHours() === 20 && agora.getMinutes() === 30) {
+      postarMensagemDiaria();
+    }
+  }, 60000);
 
-  // Checar todos os sites a cada 10 minutos
+  // Agendamento para 21:00 (loja Fortnite)
+  setInterval(() => {
+    const agora = new Date();
+    if (agora.getHours() === 21 && agora.getMinutes() === 0) {
+      postarLojaFortnite();
+    }
+  }, 60000);
+
+  // Checar notícias a cada 10 minutos
   setInterval(postarFortnite, 600000);
   setInterval(postarLibertyCity, 600000);
   setInterval(postarRockstar, 600000);
