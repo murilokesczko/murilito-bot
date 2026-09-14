@@ -1,7 +1,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const Parser = require('rss-parser');
-const axios = require('axios');
 const parser = new Parser();
 
 const client = new Client({
@@ -33,6 +32,16 @@ const frasesFortnite = [
   "🛒 Essa skin parece que saiu de um churrasco de domingo 😂",
   "💸 Promoção imperdível: risadas grátis junto com a skin!",
   "Murilito recomenda: compre duas skins e ganhe uma piada!"
+];
+
+// Lista fixa de skins (nome, preço, imagem)
+const skinsFixas = [
+  { nome: "Renegade Raider", preco: 1200, imagem: "https://i.imgur.com/renegade.png" },
+  { nome: "Black Knight", preco: 2000, imagem: "https://i.imgur.com/blackknight.png" },
+  { nome: "Peely", preco: 1500, imagem: "https://i.imgur.com/peely.png" },
+  { nome: "Drift", preco: 1800, imagem: "https://i.imgur.com/drift.png" },
+  { nome: "Midas", preco: 2000, imagem: "https://i.imgur.com/midas.png" },
+  { nome: "Skull Trooper", preco: 1200, imagem: "https://i.imgur.com/skulltrooper.png" }
 ];
 
 client.once('ready', () => {
@@ -113,72 +122,52 @@ client.once('ready', () => {
       canalPromo.send({ content: "@everyone Murilito lembra: apoiar nunca sai de moda 😎", embeds: [embed] });
     }
   }
-  // Função para postar loja do Fortnite usando API oficial
+  // Função para postar loja fixa às 21h
   async function postarLojaFortnite() {
     if (canalPromo) {
       try {
-        const { data } = await axios.get('https://fortnite-api.com/v2/shop/br');
-        const itens = data.data.entries;
-
-        for (const item of itens.slice(0, 5)) { // posta até 5 itens
-          const nome = item.items[0].name;
-          const preco = item.finalPrice;
-          const imagem = item.items[0].images.icon 
-                      || item.items[0].images.featured 
-                      || item.items[0].images.smallIcon;
-
+        for (const item of skinsFixas.slice(0, 5)) { // posta até 5 skins
           const frase = frasesFortnite[Math.floor(Math.random() * frasesFortnite.length)];
-
           const embed = {
-            title: nome,
-            description: `💰 Preço: ${preco} V-Bucks\n🛒 Use o código **TIOKHREBIS** na loja!`,
+            title: item.nome,
+            description: `💰 Preço: ${item.preco} V-Bucks\n🛒 Use o código **TIOKHREBIS** na loja!`,
             color: 0x2ecc71,
-            image: { url: imagem }
+            image: { url: item.imagem }
           };
-
           canalPromo.send({ content: "@everyone 🛍️ **Loja Fortnite Atualizada!**\n" + frase, embeds: [embed] });
         }
-      } catch (err) { console.error("Erro ao buscar loja Fortnite:", err); }
+      } catch (err) { console.error("Erro ao postar loja fixa:", err); }
     }
   }
 
-  // Função para postar enquete da loja (aleatória) usando API oficial
+  // Função para postar enquete fixa às 19h
   async function postarEnqueteLoja() {
     if (canalEnquete) {
       try {
-        const { data } = await axios.get('https://fortnite-api.com/v2/shop/br');
-        const itens = data.data.entries;
-
-        // Sorteia 3 skins aleatórias
+        // Sorteia 3 skins aleatórias da lista fixa
         const selecionados = [];
-        while (selecionados.length < 3 && itens.length > 0) {
-          const index = Math.floor(Math.random() * itens.length);
-          selecionados.push(itens[index]);
-          itens.splice(index, 1);
+        const copia = [...skinsFixas];
+        while (selecionados.length < 3 && copia.length > 0) {
+          const index = Math.floor(Math.random() * copia.length);
+          selecionados.push(copia[index]);
+          copia.splice(index, 1);
         }
 
         canalEnquete.send("📊 **Enquete da Loja Fortnite**\nVote na skin que você mais gostou!");
 
         for (const item of selecionados) {
-          const nome = item.items[0].name;
-          const preco = item.finalPrice;
-          const imagem = item.items[0].images.icon 
-                      || item.items[0].images.featured 
-                      || item.items[0].images.smallIcon;
-
           const embed = {
-            title: nome,
-            description: `💰 Preço: ${preco} V-Bucks\n🛒 Use o código **TIOKHREBIS** na loja!`,
+            title: item.nome,
+            description: `💰 Preço: ${item.preco} V-Bucks\n🛒 Use o código **TIOKHREBIS** na loja!`,
             color: 0x9b59b6,
-            image: { url: imagem }
+            image: { url: item.imagem }
           };
-
           const msg = await canalEnquete.send({ embeds: [embed] });
           await msg.react("🔥");
           await msg.react("👍");
           await msg.react("😂");
         }
-      } catch (err) { console.error("Erro ao criar enquete da loja:", err); }
+      } catch (err) { console.error("Erro ao criar enquete fixa:", err); }
     }
   }
 
@@ -217,33 +206,24 @@ client.on('messageCreate', async (message) => {
   // Comando de enquete manual
   if (message.content.toLowerCase() === '!enquete') {
     try {
-      const { data } = await axios.get('https://fortnite-api.com/v2/shop/br');
-      const itens = data.data.entries;
-
-      // Sorteia 3 skins aleatórias
+      // Sorteia 3 skins aleatórias da lista fixa
       const selecionados = [];
-      while (selecionados.length < 3 && itens.length > 0) {
-        const index = Math.floor(Math.random() * itens.length);
-        selecionados.push(itens[index]);
-        itens.splice(index, 1);
+      const copia = [...skinsFixas];
+      while (selecionados.length < 3 && copia.length > 0) {
+        const index = Math.floor(Math.random() * copia.length);
+        selecionados.push(copia[index]);
+        copia.splice(index, 1);
       }
 
       await message.channel.send("📊 **Enquete da Loja Fortnite**\nVote na skin que você mais gostou!");
 
       for (const item of selecionados) {
-        const nome = item.items[0].name;
-        const preco = item.finalPrice;
-        const imagem = item.items[0].images.icon 
-                    || item.items[0].images.featured 
-                    || item.items[0].images.smallIcon;
-
         const embed = {
-          title: nome,
-          description: `💰 Preço: ${preco} V-Bucks\n🛒 Use o código **TIOKHREBIS** na loja!`,
+          title: item.nome,
+          description: `💰 Preço: ${item.preco} V-Bucks\n🛒 Use o código **TIOKHREBIS** na loja!`,
           color: 0x9b59b6,
-          image: { url: imagem }
+          image: { url: item.imagem }
         };
-
         const msg = await message.channel.send({ embeds: [embed] });
         await msg.react("🔥");
         await msg.react("👍");
