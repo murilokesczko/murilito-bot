@@ -17,13 +17,17 @@ client.once('ready', () => {
   // IDs dos canais
   const canalFortnite = client.channels.cache.get("1517339263216390164");
   const canalGTA = client.channels.cache.get("1520508956978712576");
+  const canalPromo = client.channels.cache.get("1517333302032470191");
 
   // Mensagens de teste ao iniciar
   if (canalFortnite) {
-    canalFortnite.send("@everyone ✅ Teste: Murilito NEWS está funcionando e pronto pra postar notícias de Fortnite!");
+    canalFortnite.send("@everyone ✅ Teste: Murilo NEWS está funcionando e pronto pra postar notícias de Fortnite!");
   }
   if (canalGTA) {
-    canalGTA.send("@everyone ✅ Teste: Murilito NEWS está funcionando e pronto pra postar notícias de GTA!");
+    canalGTA.send("@everyone ✅ Teste: Murilo NEWS está funcionando e pronto pra postar notícias de GTA!");
+  }
+  if (canalPromo) {
+    canalPromo.send("@everyone ✅ Teste: Mensagem diária configurada!");
   }
 
   // Função para postar notícias do Fortnite
@@ -88,6 +92,37 @@ client.once('ready', () => {
       console.error('Erro ao buscar Rockstar:', err);
     }
   }
+
+  // Função para postar mensagem fixa às 20:30
+  function postarMensagemDiaria() {
+    if (canalPromo) {
+      const embed = {
+        title: "🎯 Apoie com o código TIOKHREBIS 🎯",
+        description: "🛒 **Quando for comprar algo na loja do Fortnite, use o código: TIOKHREBIS**\n\nApoie o Murilo NEWS e fortaleça a comunidade!",
+        color: 0x3498db,
+        image: { 
+          url: "https://cdn.discordapp.com/attachments/1517333302032470191/1548861867429208105/Copilot_20260913_220355.png?ex=6aa89985&is=6aa74805&hm=0d44f5d41193443ea3ed485fc515e014d09ebe7ae6a94005493fcb8e0a8c817c&"
+        }
+      };
+      canalPromo.send({ content: "@everyone", embeds: [embed] });
+      console.log("Mensagem diária enviada!");
+    }
+  }
+
+  // Agendar para 20:30 todos os dias
+  function agendarMensagemDiaria() {
+    setInterval(() => {
+      const agora = new Date();
+      const horas = agora.getHours();
+      const minutos = agora.getMinutes();
+
+      if (horas === 20 && minutos === 30) {
+        postarMensagemDiaria();
+      }
+    }, 60000); // checa a cada minuto
+  }
+
+  agendarMensagemDiaria();
 
   // Checar todos os sites a cada 10 minutos
   setInterval(postarFortnite, 600000);
