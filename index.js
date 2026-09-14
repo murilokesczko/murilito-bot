@@ -15,7 +15,7 @@ client.once('ready', () => {
   console.log(`✅ Bot conectado como ${client.user.tag}`);
 
   // Pega o canal certo
-  const canal = client.channels.cache.get("1517339263216390164");
+  const canal = client.channels.cache.get("1520508956978712576");
 
   // Mensagem de teste
   if (canal) {
