@@ -14,12 +14,15 @@ const client = new Client({
 client.once('ready', () => {
   console.log(`✅ Bot conectado como ${client.user.tag}`);
 
+  // Mensagem de teste para confirmar que o bot está postando no canal certo
+  const canal = client.channels.cache.get("732358123427332177");
+  canal.send("✅ Teste: Murilito está funcionando e pronto pra postar notícias!");
+
   // Função para postar notícias do LibertyCity
   async function postarLibertyCity() {
     try {
       const feed = await parser.parseURL('https://pt.libertycity.net/news/rss');
       const noticia = feed.items[0];
-      const canal = client.channels.cache.get(process.env.CANAL_ID);
       canal.send(`📰 **Nova notícia de GTA (LibertyCity):**\n${noticia.title}\n${noticia.link}`);
       console.log(`LibertyCity postada: ${noticia.title}`);
     } catch (err) {
@@ -32,7 +35,6 @@ client.once('ready', () => {
     try {
       const feed = await parser.parseURL('https://www.rockstargames.com/br/newswire/rss');
       const noticia = feed.items[0];
-      const canal = client.channels.cache.get(process.env.CANAL_ID);
       canal.send(`📰 **Nova notícia de GTA (Rockstar Newswire):**\n${noticia.title}\n${noticia.link}`);
       console.log(`Rockstar postada: ${noticia.title}`);
     } catch (err) {
