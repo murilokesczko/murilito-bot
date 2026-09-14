@@ -11,7 +11,26 @@ const client = new Client({
   ]
 });
 
-// Frases divertidas
+// IDs fixos dos canais
+const ID_LOJA = "1517333302032470191";
+const ID_FORTNITE = "1517339263216390164";
+const ID_GTA = "1520508956978712576";
+
+// Lista de piadas/frases (adicione até 100+)
+const piadas = [
+  "Por que o carro do GTA nunca quebra? Porque é blindado contra bugs 😂",
+  "Fortnite sem construção é tipo pizza sem queijo 🍕",
+  "Murilito entrou na loja... e saiu sem V-Bucks 😭",
+  "CJ disse: 'Ah, lá vamos nós de novo...' 🎮",
+  "Essa skin parece que saiu de um churrasco de domingo 😂",
+  "Breaking News: Murilito ainda não ganhou na loteria 🎰",
+  "O Peely escorregou na própria casca 🍌",
+  "Rockstar demora tanto pra lançar GTA 6 que até o CJ já ficou velho 👴",
+  "Skin rara? Mais rara é ver o Murilito ganhar uma partida 😂",
+  "Fortnite é tipo namoro: se não construir, desmorona 💔",
+  // ... continue adicionando até 100+
+];
+
 const frasesGTA = [
   "🚗 Essa notícia é mais quente que o motor do CJ!",
   "🔥 Rockstar soltando novidade, segura o hype!",
@@ -24,7 +43,7 @@ const frasesFortnite = [
   "Murilito recomenda: compre duas skins e ganhe uma piada!"
 ];
 
-// Funções de postagem de notícias
+// Funções de postagem
 async function postarFortnite(channel) {
   try {
     const feed = await parser.parseURL('https://fortnite.gg/news/rss');
@@ -76,7 +95,6 @@ async function postarRockstar(channel) {
   } catch (err) { console.error('Erro ao buscar Rockstar:', err); }
 }
 
-// Função para postar loja (link direto)
 async function postarLojaFortnite(channel) {
   const embed = {
     title: "🛍️ Loja Fortnite Atualizada!",
@@ -90,9 +108,9 @@ async function postarLojaFortnite(channel) {
 client.once('ready', () => {
   console.log(`✅ Murilito NEWS conectado como ${client.user.tag}`);
 
-  const canalFortnite = client.channels.cache.get("1517339263216390164");
-  const canalGTA = client.channels.cache.get("1520508956978712576");
-  const canalPromo = client.channels.cache.get("1517333302032470191");
+  const canalFortnite = client.channels.cache.get(ID_FORTNITE);
+  const canalGTA = client.channels.cache.get(ID_GTA);
+  const canalLoja = client.channels.cache.get(ID_LOJA);
 
   // Agendamentos
   setInterval(() => {
@@ -103,13 +121,13 @@ client.once('ready', () => {
         description: "🛒 **Quando for comprar algo na loja do Fortnite, use o código: TIOKHREBIS**\n\nApoie o Tio Khrebis e fortaleça a comunidade!",
         color: 0x3498db
       };
-      canalPromo.send({ content: "@everyone Murilito lembra: apoiar nunca sai de moda 😎", embeds: [embed] });
+      canalLoja.send({ content: "@everyone Murilito lembra: apoiar nunca sai de moda 😎", embeds: [embed] });
     }
   }, 60000);
 
   setInterval(() => {
     const agora = new Date();
-    if (agora.getHours() === 21 && agora.getMinutes() === 0) postarLojaFortnite(canalPromo);
+    if (agora.getHours() === 21 && agora.getMinutes() === 0) postarLojaFortnite(canalLoja);
   }, 60000);
 
   setInterval(() => postarFortnite(canalFortnite), 600000);
@@ -125,10 +143,16 @@ client.on('messageCreate', async (message) => {
   if (message.content.toLowerCase() === '!teste') {
     await message.channel.send("🔎 Testando Murilito... Últimas postagens reais:");
 
-    await postarFortnite(message.channel);
-    await postarLibertyCity(message.channel);
-    await postarRockstar(message.channel);
-    await postarLojaFortnite(message.channel);
+    await postarFortnite(client.channels.cache.get(ID_FORTNITE));
+    await postarLibertyCity(client.channels.cache.get(ID_GTA));
+    await postarRockstar(client.channels.cache.get(ID_GTA));
+    await postarLojaFortnite(client.channels.cache.get(ID_LOJA));
+  }
+
+  // Comando de piada
+  if (message.content.toLowerCase() === '!piada') {
+    const piada = piadas[Math.floor(Math.random() * piadas.length)];
+    message.channel.send(piada);
   }
 
   // Reações automáticas
