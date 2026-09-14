@@ -13,14 +13,14 @@ const cheerio = require("cheerio");
 // CONFIGURAÇÃO
 // ============================================================
 
-const TOKEN = process.env.DISCORD_TOKEN;
+const TOKEN = process.env.TOKEN;
 
 const ID_LOJA = "1517333302032470191";
 const ID_FORTNITE = "1517339263216390164";
 const ID_GTA = "1520508956978712576";
 
 const CONFIG = {
-  intervaloNoticias: 10 * 60 * 1000, // 10 minutos
+  intervaloNoticias: 10 * 60 * 1000,
   horarioLoja: "21:00",
   timezone: "America/Sao_Paulo",
 
@@ -29,7 +29,6 @@ const CONFIG = {
 
   mensagensVerificar: 100,
 
-  // Quantos segundos esperar entre publicações
   intervaloPublicacao: 3,
 };
 
@@ -76,15 +75,7 @@ const http = axios.create({
 // ============================================================
 
 let cicloEmAndamento = false;
-let lojaPublicadaHoje = false;
 let ultimoDiaLoja = null;
-
-// Evita que duas execuções publiquem a mesma notícia
-const noticiasProcessadas = {
-  fortnite: new Set(),
-  libertycity: new Set(),
-  rockstar: new Set(),
-};
 
 // ============================================================
 // PIADAS
@@ -150,7 +141,11 @@ function obterImagem($, elemento, baseUrl) {
     img.attr("data-src"),
     img.attr("data-lazy-src"),
     img.attr("data-original"),
-    img.attr("srcset")?.split(",")[0]?.trim()?.split(" ")[0],
+    img
+      .attr("srcset")
+      ?.split(",")[0]
+      ?.trim()
+      ?.split(" ")[0],
   ];
 
   for (const imagem of candidatos) {
@@ -200,7 +195,11 @@ function extrairMetaTitulo($) {
 async function baixarPagina(url, opcoes = {}) {
   let ultimoErro = null;
 
-  for (let tentativa = 1; tentativa <= CONFIG.tentativas; tentativa++) {
+  for (
+    let tentativa = 1;
+    tentativa <= CONFIG.tentativas;
+    tentativa++
+  ) {
     try {
       console.log(
         `🌐 GET ${url} | tentativa ${tentativa}/${CONFIG.tentativas}`
@@ -283,7 +282,10 @@ async function publicarNoticia({
 }) {
   try {
     if (!channel) {
-      console.log(`❌ ${fonte}: canal não encontrado.`);
+      console.log(
+        `❌ ${fonte}: canal não encontrado.`
+      );
+
       return false;
     }
 
@@ -295,10 +297,8 @@ async function publicarNoticia({
       return false;
     }
 
-    const jaPublicada = await noticiaJaPublicada(
-      channel,
-      url
-    );
+    const jaPublicada =
+      await noticiaJaPublicada(channel, url);
 
     if (jaPublicada) {
       console.log(
@@ -314,7 +314,7 @@ async function publicarNoticia({
       .setDescription(
         limitarTexto(
           descricao ||
-            "Confira a notícia completa no site oficial.",
+            "Confira a notícia completa no site.",
           4000
         )
       )
@@ -328,7 +328,7 @@ async function publicarNoticia({
         embed.setImage(imagem);
       } catch {
         console.log(
-          `⚠️ ${fonte}: imagem inválida, continuando sem imagem.`
+          `⚠️ ${fonte}: imagem inválida.`
         );
       }
     }
@@ -366,16 +366,20 @@ async function buscarFortnite() {
 
   for (const urlFonte of fontes) {
     try {
-      console.log(`🔎 Fortnite: tentando ${urlFonte}`);
+      console.log(
+        `🔎 Fortnite: tentando ${urlFonte}`
+      );
 
-      const html = await baixarPagina(urlFonte);
+      const html =
+        await baixarPagina(urlFonte);
 
       const $ = cheerio.load(html);
 
       const candidatos = [];
 
       $("a[href]").each((_, elemento) => {
-        const href = $(elemento).attr("href");
+        const href =
+          $(elemento).attr("href");
 
         if (!href) return;
 
@@ -386,21 +390,31 @@ async function buscarFortnite() {
 
         if (!url) return;
 
-        const urlLower = url.toLowerCase();
+        const urlLower =
+          url.toLowerCase();
 
         if (
           !urlLower.includes("/news/") ||
-          urlLower === "https://fortnite.gg/news"
+          urlLower ===
+            "https://fortnite.gg/news"
         ) {
           return;
         }
 
-        const titulo = limparTexto(
-          $(elemento).find("h1,h2,h3,h4").first().text() ||
+        const titulo =
+          limparTexto(
+            $(elemento)
+              .find("h1,h2,h3,h4")
+              .first()
+              .text()
+          ) ||
+          limparTexto(
             $(elemento).text()
-        );
+          );
 
-        if (!titulo || titulo.length < 5) return;
+        if (!titulo || titulo.length < 5) {
+          return;
+        }
 
         candidatos.push({
           titulo,
@@ -410,17 +424,18 @@ async function buscarFortnite() {
               $,
               elemento,
               "https://fortnite.gg"
-            ) || extrairMetaImagem($),
+            ) ||
+            extrairMetaImagem($),
         });
       });
 
-      // Remover duplicados
       const unicos = [];
 
       for (const noticia of candidatos) {
         if (
           !unicos.some(
-            (item) => item.url === noticia.url
+            (item) =>
+              item.url === noticia.url
           )
         ) {
           unicos.push(noticia);
@@ -441,28 +456,37 @@ async function buscarFortnite() {
         `📰 Fortnite encontrada: ${noticia.titulo}`
       );
 
-      // Abrir a notícia para pegar descrição/imagem
       try {
-        const artigoHtml = await baixarPagina(
-          noticia.url
-        );
+        const artigoHtml =
+          await baixarPagina(
+            noticia.url
+          );
 
-        const artigo$ = cheerio.load(artigoHtml);
+        const artigo$ =
+          cheerio.load(artigoHtml);
 
         const titulo =
-          extrairMetaTitulo(artigo$) ||
+          extrairMetaTitulo(
+            artigo$
+          ) ||
           noticia.titulo;
 
         const descricao =
-          extrairMetaDescricao(artigo$) ||
+          extrairMetaDescricao(
+            artigo$
+          ) ||
           limparTexto(
-            artigo$("article p, main p, p")
+            artigo$(
+              "article p, main p, p"
+            )
               .first()
               .text()
           );
 
         const imagem =
-          extrairMetaImagem(artigo$) ||
+          extrairMetaImagem(
+            artigo$
+          ) ||
           noticia.imagem;
 
         return {
@@ -509,14 +533,16 @@ async function buscarLibertyCity() {
     "https://pt.libertycity.net/news/";
 
   try {
-    const html = await baixarPagina(urlBase);
+    const html =
+      await baixarPagina(urlBase);
 
     const $ = cheerio.load(html);
 
     const candidatos = [];
 
     $("a[href]").each((_, elemento) => {
-      const href = $(elemento).attr("href");
+      const href =
+        $(elemento).attr("href");
 
       if (!href) return;
 
@@ -528,7 +554,9 @@ async function buscarLibertyCity() {
       if (!url) return;
 
       if (
-        !url.includes("pt.libertycity.net/news/")
+        !url.includes(
+          "pt.libertycity.net/news/"
+        )
       ) {
         return;
       }
@@ -536,15 +564,20 @@ async function buscarLibertyCity() {
       const titulo =
         limparTexto(
           $(elemento)
-            .find("h1,h2,h3,h4,.title")
+            .find(
+              "h1,h2,h3,h4,.title"
+            )
             .first()
             .text()
         ) ||
-        limparTexto($(elemento).text());
+        limparTexto(
+          $(elemento).text()
+        );
 
-      if (!titulo || titulo.length < 5) return;
+      if (!titulo || titulo.length < 5) {
+        return;
+      }
 
-      // Evita páginas genéricas
       if (
         titulo.toLowerCase() === "news" ||
         titulo.toLowerCase() === "notícias"
@@ -568,7 +601,8 @@ async function buscarLibertyCity() {
     for (const noticia of candidatos) {
       if (
         !unicos.some(
-          (item) => item.url === noticia.url
+          (item) =>
+            item.url === noticia.url
         )
       ) {
         unicos.push(noticia);
@@ -594,26 +628,36 @@ async function buscarLibertyCity() {
     );
 
     try {
-      const artigoHtml = await baixarPagina(
-        noticia.url
-      );
+      const artigoHtml =
+        await baixarPagina(
+          noticia.url
+        );
 
-      const artigo$ = cheerio.load(artigoHtml);
+      const artigo$ =
+        cheerio.load(artigoHtml);
 
       const titulo =
-        extrairMetaTitulo(artigo$) ||
+        extrairMetaTitulo(
+          artigo$
+        ) ||
         noticia.titulo;
 
       const descricao =
-        extrairMetaDescricao(artigo$) ||
+        extrairMetaDescricao(
+          artigo$
+        ) ||
         limparTexto(
-          artigo$("article p, .article p, main p, p")
+          artigo$(
+            "article p, .article p, main p, p"
+          )
             .first()
             .text()
         );
 
       const imagem =
-        extrairMetaImagem(artigo$) ||
+        extrairMetaImagem(
+          artigo$
+        ) ||
         noticia.imagem;
 
       return {
@@ -653,7 +697,8 @@ async function buscarRockstar() {
     "https://www.rockstargames.com/br/newswire";
 
   try {
-    const html = await baixarPagina(urlBase);
+    const html =
+      await baixarPagina(urlBase);
 
     console.log(
       `🔎 Rockstar: HTML recebido (${html.length} caracteres).`
@@ -663,12 +708,10 @@ async function buscarRockstar() {
 
     const candidatos = [];
 
-    // --------------------------------------------------------
-    // MÉTODO 1 - links tradicionais
-    // --------------------------------------------------------
-
+    // Método 1: links tradicionais
     $("a[href]").each((_, elemento) => {
-      const href = $(elemento).attr("href");
+      const href =
+        $(elemento).attr("href");
 
       if (!href) return;
 
@@ -679,10 +722,13 @@ async function buscarRockstar() {
 
       if (!url) return;
 
-      const urlLower = url.toLowerCase();
+      const urlLower =
+        url.toLowerCase();
 
       if (
-        !urlLower.includes("/newswire/")
+        !urlLower.includes(
+          "/newswire/"
+        )
       ) {
         return;
       }
@@ -690,11 +736,15 @@ async function buscarRockstar() {
       const titulo =
         limparTexto(
           $(elemento)
-            .find("h1,h2,h3,h4,h5")
+            .find(
+              "h1,h2,h3,h4,h5"
+            )
             .first()
             .text()
         ) ||
-        limparTexto($(elemento).text());
+        limparTexto(
+          $(elemento).text()
+        );
 
       if (!titulo || titulo.length < 5) {
         return;
@@ -711,10 +761,7 @@ async function buscarRockstar() {
       });
     });
 
-    // --------------------------------------------------------
-    // MÉTODO 2 - procurar URLs dentro do HTML bruto
-    // --------------------------------------------------------
-
+    // Método 2: procurar URLs no HTML
     const regex =
       /(?:https?:\/\/www\.rockstargames\.com)?\/br\/newswire\/[^"'\\<>\s]+/gi;
 
@@ -736,16 +783,13 @@ async function buscarRockstar() {
       });
     }
 
-    // --------------------------------------------------------
-    // Remover duplicados
-    // --------------------------------------------------------
-
     const unicos = [];
 
     for (const noticia of candidatos) {
       if (
         !unicos.some(
-          (item) => item.url === noticia.url
+          (item) =>
+            item.url === noticia.url
         )
       ) {
         unicos.push(noticia);
@@ -756,37 +800,47 @@ async function buscarRockstar() {
       `🔎 Rockstar: ${unicos.length} possíveis URLs encontradas.`
     );
 
-    // --------------------------------------------------------
-    // Se achou URL mas não achou título,
-    // abrir a página individual
-    // --------------------------------------------------------
-
-    for (const noticia of unicos.slice(0, 10)) {
+    for (
+      const noticia of unicos.slice(0, 10)
+    ) {
       try {
         const artigoHtml =
-          await baixarPagina(noticia.url);
+          await baixarPagina(
+            noticia.url
+          );
 
         const artigo$ =
           cheerio.load(artigoHtml);
 
         const titulo =
-          extrairMetaTitulo(artigo$) ||
+          extrairMetaTitulo(
+            artigo$
+          ) ||
           noticia.titulo;
 
-        if (!titulo || titulo.length < 5) {
+        if (
+          !titulo ||
+          titulo.length < 5
+        ) {
           continue;
         }
 
         const descricao =
-          extrairMetaDescricao(artigo$) ||
+          extrairMetaDescricao(
+            artigo$
+          ) ||
           limparTexto(
-            artigo$("article p, main p, p")
+            artigo$(
+              "article p, main p, p"
+            )
               .first()
               .text()
           );
 
         const imagem =
-          extrairMetaImagem(artigo$) ||
+          extrairMetaImagem(
+            artigo$
+          ) ||
           noticia.imagem;
 
         console.log(
@@ -802,17 +856,14 @@ async function buscarRockstar() {
             "Confira a notícia completa no Rockstar Newswire.",
           imagem,
         };
-      } catch (erro) {
+      } catch {
         console.log(
           `⚠️ Rockstar: não foi possível abrir ${noticia.url}`
         );
       }
     }
 
-    // --------------------------------------------------------
-    // FALLBACK: procurar dados JSON embutidos
-    // --------------------------------------------------------
-
+    // Método 3: scripts internos
     const scripts = $("script")
       .map((_, el) => $(el).html())
       .get()
@@ -846,7 +897,8 @@ async function buscarRockstar() {
 
       return {
         fonte: "Rockstar Games",
-        titulo: "Nova notícia no Rockstar Newswire",
+        titulo:
+          "Nova notícia no Rockstar Newswire",
         url,
         descricao:
           "Confira a notícia mais recente diretamente no Rockstar Newswire.",
@@ -875,7 +927,9 @@ async function buscarRockstar() {
 async function postarLojaFortnite() {
   try {
     const channel =
-      await client.channels.fetch(ID_LOJA);
+      await client.channels.fetch(
+        ID_LOJA
+      );
 
     if (!channel) {
       console.log(
@@ -891,12 +945,15 @@ async function postarLojaFortnite() {
         "A loja do Fortnite foi atualizada!\n\n" +
         "Confira todas as skins, itens e novidades:"
       )
-      .setURL("https://fortnite.gg/shop")
+      .setURL(
+        "https://fortnite.gg/shop"
+      )
       .setImage(
         "https://fortnite.gg/img/og-shop.jpg"
       )
       .setFooter({
-        text: "Murilito NEWS • Fortnite Shop",
+        text:
+          "Murilito NEWS • Fortnite Shop",
       })
       .setTimestamp();
 
@@ -921,12 +978,13 @@ async function postarLojaFortnite() {
 }
 
 // ============================================================
-// PUBLICAR FORTNITE
+// POSTAR FORTNITE
 // ============================================================
 
 async function postarFortnite() {
   try {
-    const noticia = await buscarFortnite();
+    const noticia =
+      await buscarFortnite();
 
     if (!noticia) {
       console.log(
@@ -937,7 +995,9 @@ async function postarFortnite() {
     }
 
     const channel =
-      await client.channels.fetch(ID_FORTNITE);
+      await client.channels.fetch(
+        ID_FORTNITE
+      );
 
     await publicarNoticia({
       channel,
@@ -952,7 +1012,7 @@ async function postarFortnite() {
 }
 
 // ============================================================
-// PUBLICAR LIBERTYCITY
+// POSTAR LIBERTYCITY
 // ============================================================
 
 async function postarLibertyCity() {
@@ -969,7 +1029,9 @@ async function postarLibertyCity() {
     }
 
     const channel =
-      await client.channels.fetch(ID_GTA);
+      await client.channels.fetch(
+        ID_GTA
+      );
 
     await publicarNoticia({
       channel,
@@ -984,7 +1046,7 @@ async function postarLibertyCity() {
 }
 
 // ============================================================
-// PUBLICAR ROCKSTAR
+// POSTAR ROCKSTAR
 // ============================================================
 
 async function postarRockstar() {
@@ -1001,7 +1063,9 @@ async function postarRockstar() {
     }
 
     const channel =
-      await client.channels.fetch(ID_GTA);
+      await client.channels.fetch(
+        ID_GTA
+      );
 
     await publicarNoticia({
       channel,
@@ -1034,27 +1098,34 @@ async function executarCicloNoticias() {
   console.log(
     "📰 INICIANDO CICLO DE NOTÍCIAS"
   );
+
   console.log(
-    `🇧🇷 ${new Date().toLocaleString("pt-BR", {
-      timeZone: CONFIG.timezone,
-    })}`
+    `🇧🇷 ${new Date().toLocaleString(
+      "pt-BR",
+      {
+        timeZone:
+          CONFIG.timezone,
+      }
+    )}`
   );
+
   console.log(
     "========================================"
   );
 
   try {
-    // Fortnite
     await postarFortnite();
 
-    await esperar(CONFIG.intervaloPublicacao);
+    await esperar(
+      CONFIG.intervaloPublicacao
+    );
 
-    // LibertyCity
     await postarLibertyCity();
 
-    await esperar(CONFIG.intervaloPublicacao);
+    await esperar(
+      CONFIG.intervaloPublicacao
+    );
 
-    // Rockstar
     await postarRockstar();
   } catch (erro) {
     console.log(
@@ -1074,29 +1145,32 @@ async function executarCicloNoticias() {
 }
 
 // ============================================================
-// CONTROLE DA LOJA - HORÁRIO DE BRASÍLIA
+// HORÁRIO DA LOJA
 // ============================================================
 
 function verificarHorarioLoja() {
   const agora = new Date();
 
-  const partes = new Intl.DateTimeFormat(
-    "en-CA",
-    {
-      timeZone: CONFIG.timezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    }
-  ).formatToParts(agora);
+  const partes =
+    new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone:
+          CONFIG.timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }
+    ).formatToParts(agora);
 
   const valores = {};
 
   for (const parte of partes) {
-    valores[parte.type] = parte.value;
+    valores[parte.type] =
+      parte.value;
   }
 
   const horaAtual =
@@ -1106,7 +1180,8 @@ function verificarHorarioLoja() {
     `${valores.year}-${valores.month}-${valores.day}`;
 
   if (
-    horaAtual === CONFIG.horarioLoja &&
+    horaAtual ===
+      CONFIG.horarioLoja &&
     ultimoDiaLoja !== diaAtual
   ) {
     ultimoDiaLoja = diaAtual;
@@ -1127,7 +1202,8 @@ async function enviarPiada(message) {
   const piada =
     piadas[
       Math.floor(
-        Math.random() * piadas.length
+        Math.random() *
+          piadas.length
       )
     ];
 
@@ -1160,7 +1236,10 @@ async function enviarAjuda(message) {
 // TESTES
 // ============================================================
 
-async function executarTeste(tipo, message) {
+async function executarTeste(
+  tipo,
+  message
+) {
   switch (tipo) {
     case "fortnite":
       await message.reply(
@@ -1218,15 +1297,21 @@ async function executarTeste(tipo, message) {
 
       await postarFortnite();
 
-      await esperar(CONFIG.intervaloPublicacao);
+      await esperar(
+        CONFIG.intervaloPublicacao
+      );
 
       await postarLibertyCity();
 
-      await esperar(CONFIG.intervaloPublicacao);
+      await esperar(
+        CONFIG.intervaloPublicacao
+      );
 
       await postarRockstar();
 
-      await esperar(CONFIG.intervaloPublicacao);
+      await esperar(
+        CONFIG.intervaloPublicacao
+      );
 
       await postarLojaFortnite();
 
@@ -1237,133 +1322,171 @@ async function executarTeste(tipo, message) {
 }
 
 // ============================================================
-// EVENTO READY
+// READY
 // ============================================================
 
-client.once("ready", async () => {
-  console.log("");
-  console.log("========================================");
-  console.log("🤖 MURILITO NEWS ONLINE");
-  console.log(`👤 Login: ${client.user.tag}`);
-  console.log("========================================");
+client.once(
+  "ready",
+  async () => {
+    console.log("");
+    console.log(
+      "========================================"
+    );
 
-  console.log(
-    `📰 Notícias: a cada ${CONFIG.intervaloNoticias / 60000} minutos`
-  );
+    console.log(
+      "🤖 MURILITO NEWS ONLINE"
+    );
 
-  console.log(
-    `🛒 Loja: todos os dias às ${CONFIG.horarioLoja} (Brasil)`
-  );
+    console.log(
+      `👤 Login: ${client.user.tag}`
+    );
 
-  console.log(
-    "========================================"
-  );
+    console.log(
+      "========================================"
+    );
 
-  // Executa um ciclo inicial
-  await executarCicloNoticias();
+    console.log(
+      `📰 Notícias: a cada ${
+        CONFIG.intervaloNoticias /
+        60000
+      } minutos`
+    );
 
-  // Notícias
-  setInterval(
-    executarCicloNoticias,
-    CONFIG.intervaloNoticias
-  );
+    console.log(
+      `🛒 Loja: todos os dias às ${CONFIG.horarioLoja} (Brasil)`
+    );
 
-  // Loja
-  setInterval(
-    verificarHorarioLoja,
-    30000
-  );
+    console.log(
+      "========================================"
+    );
 
-  console.log(
-    "⏰ Agendamentos iniciados."
-  );
-});
+    await executarCicloNoticias();
+
+    setInterval(
+      executarCicloNoticias,
+      CONFIG.intervaloNoticias
+    );
+
+    setInterval(
+      verificarHorarioLoja,
+      30000
+    );
+
+    console.log(
+      "⏰ Agendamentos iniciados."
+    );
+  }
+);
 
 // ============================================================
 // MENSAGENS
 // ============================================================
 
-client.on("messageCreate", async (message) => {
-  try {
-    if (message.author.bot) return;
-
-    const texto = message.content
-      .trim()
-      .toLowerCase();
-
-    if (!texto.startsWith("!")) {
-      return;
-    }
-
-    if (texto === "!piada") {
-      await enviarPiada(message);
-      return;
-    }
-
-    if (texto === "!ajuda") {
-      await enviarAjuda(message);
-      return;
-    }
-
-    if (texto === "!teste") {
-      await executarTeste(
-        "todos",
-        message
-      );
-
-      return;
-    }
-
-    if (texto === "!teste fortnite") {
-      await executarTeste(
-        "fortnite",
-        message
-      );
-
-      return;
-    }
-
-    if (
-      texto === "!teste liberty" ||
-      texto === "!teste libertycity"
-    ) {
-      await executarTeste(
-        "liberty",
-        message
-      );
-
-      return;
-    }
-
-    if (texto === "!teste rockstar") {
-      await executarTeste(
-        "rockstar",
-        message
-      );
-
-      return;
-    }
-
-    if (texto === "!teste loja") {
-      await executarTeste(
-        "loja",
-        message
-      );
-
-      return;
-    }
-  } catch (erro) {
-    console.log(
-      `❌ Erro no comando: ${erro.message}`
-    );
-
+client.on(
+  "messageCreate",
+  async (message) => {
     try {
-      await message.reply(
-        "❌ Ocorreu um erro ao executar o comando."
+      if (message.author.bot) {
+        return;
+      }
+
+      const texto =
+        message.content
+          .trim()
+          .toLowerCase();
+
+      if (
+        !texto.startsWith("!")
+      ) {
+        return;
+      }
+
+      if (texto === "!piada") {
+        await enviarPiada(
+          message
+        );
+
+        return;
+      }
+
+      if (texto === "!ajuda") {
+        await enviarAjuda(
+          message
+        );
+
+        return;
+      }
+
+      if (texto === "!teste") {
+        await executarTeste(
+          "todos",
+          message
+        );
+
+        return;
+      }
+
+      if (
+        texto ===
+        "!teste fortnite"
+      ) {
+        await executarTeste(
+          "fortnite",
+          message
+        );
+
+        return;
+      }
+
+      if (
+        texto ===
+          "!teste liberty" ||
+        texto ===
+          "!teste libertycity"
+      ) {
+        await executarTeste(
+          "liberty",
+          message
+        );
+
+        return;
+      }
+
+      if (
+        texto ===
+        "!teste rockstar"
+      ) {
+        await executarTeste(
+          "rockstar",
+          message
+        );
+
+        return;
+      }
+
+      if (
+        texto === "!teste loja"
+      ) {
+        await executarTeste(
+          "loja",
+          message
+        );
+
+        return;
+      }
+    } catch (erro) {
+      console.log(
+        `❌ Erro no comando: ${erro.message}`
       );
-    } catch {}
+
+      try {
+        await message.reply(
+          "❌ Ocorreu um erro ao executar o comando."
+        );
+      } catch {}
+    }
   }
-});
+);
 
 // ============================================================
 // REAÇÕES
@@ -1371,12 +1494,18 @@ client.on("messageCreate", async (message) => {
 
 client.on(
   "messageReactionAdd",
-  async (reaction, user) => {
+  async (
+    reaction,
+    user
+  ) => {
     try {
-      if (user.bot) return;
+      if (user.bot) {
+        return;
+      }
 
       if (
-        reaction.emoji.name === "🛒"
+        reaction.emoji.name ===
+        "🛒"
       ) {
         console.log(
           `🛒 ${user.tag} reagiu com carrinho.`
@@ -1384,7 +1513,8 @@ client.on(
       }
 
       if (
-        reaction.emoji.name === "🚗"
+        reaction.emoji.name ===
+        "🚗"
       ) {
         console.log(
           `🚗 ${user.tag} reagiu com carro.`
@@ -1399,7 +1529,7 @@ client.on(
 );
 
 // ============================================================
-// ERROS
+// TRATAMENTO DE ERROS
 // ============================================================
 
 process.on(
@@ -1428,16 +1558,20 @@ process.on(
 
 if (!TOKEN) {
   console.error(
-    "❌ DISCORD_TOKEN não encontrado nas variáveis do Railway."
+    "❌ TOKEN não encontrado nas variáveis do Railway."
   );
 
   process.exit(1);
 }
 
-client.login(TOKEN).catch((erro) => {
-  console.error(
-    "❌ Erro ao conectar no Discord:"
-  );
+client
+  .login(TOKEN)
+  .catch((erro) => {
+    console.error(
+      "❌ Erro ao conectar no Discord:"
+    );
 
-  console.error(erro);
-});
+    console.error(
+      erro
+    );
+  });
