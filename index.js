@@ -14,14 +14,16 @@ const client = new Client({
 client.once('ready', () => {
   console.log(`✅ Bot conectado como ${client.user.tag}`);
 
-  // Canal onde o Murilo NEWS vai postar
-  const canal = client.channels.cache.get("1517339263216390164");
+  // IDs dos canais
+  const canalFortnite = client.channels.cache.get("1517339263216390164");
+  const canalGTA = client.channels.cache.get("1520508956978712576");
 
   // Mensagem de teste ao iniciar
-  if (canal) {
-    canal.send("@everyone ✅ Teste: Murilo NEWS está funcionando e pronto pra postar notícias!");
-  } else {
-    console.error("❌ Canal não encontrado. Verifique o ID.");
+  if (canalFortnite) {
+    canalFortnite.send("@everyone ✅ Teste: Murilo NEWS está funcionando e pronto pra postar notícias de Fortnite!");
+  }
+  if (canalGTA) {
+    canalGTA.send("@everyone ✅ Teste: Murilo NEWS está funcionando e pronto pra postar notícias de GTA!");
   }
 
   // Função para postar notícias do Fortnite
@@ -29,31 +31,31 @@ client.once('ready', () => {
     try {
       const feed = await parser.parseURL('https://fortnite.gg/news/rss');
       const noticia = feed.items[0];
-      canal.send(`@everyone 📰 **Nova notícia de Fortnite: E use o código na Loja: TIOKHREBIS**\n${noticia.title}\n${noticia.link}`);
+      canalFortnite.send(`@everyone 📰 **Use o CÓDIGO: TIOKHREBIS**\n${noticia.title}\n${noticia.link}`);
       console.log(`Fortnite postada: ${noticia.title}`);
     } catch (err) {
       console.error('Erro ao buscar Fortnite:', err);
     }
   }
 
-  // Função para postar notícias do LibertyCity
+  // Função para postar notícias do LibertyCity (GTA)
   async function postarLibertyCity() {
     try {
       const feed = await parser.parseURL('https://pt.libertycity.net/news/rss');
       const noticia = feed.items[0];
-      canal.send(`@everyone 📰 **Nova notícia de GTA (LibertyCity):**\n${noticia.title}\n${noticia.link}`);
+      canalGTA.send(`@everyone 📰 **Nova notícia de GTA (LibertyCity):**\n${noticia.title}\n${noticia.link}`);
       console.log(`LibertyCity postada: ${noticia.title}`);
     } catch (err) {
       console.error('Erro ao buscar LibertyCity:', err);
     }
   }
 
-  // Função para postar notícias do Rockstar Newswire
+  // Função para postar notícias do Rockstar Newswire (GTA)
   async function postarRockstar() {
     try {
       const feed = await parser.parseURL('https://www.rockstargames.com/br/newswire/rss');
       const noticia = feed.items[0];
-      canal.send(`@everyone 📰 **Nova notícia de GTA (Rockstar Newswire):**\n${noticia.title}\n${noticia.link}`);
+      canalGTA.send(`@everyone 📰 **Nova notícia de GTA (Rockstar Newswire):**\n${noticia.title}\n${noticia.link}`);
       console.log(`Rockstar postada: ${noticia.title}`);
     } catch (err) {
       console.error('Erro ao buscar Rockstar:', err);
