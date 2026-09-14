@@ -21,10 +21,10 @@ client.once('ready', () => {
 
   // Mensagens de teste ao iniciar
   if (canalFortnite) {
-    canalFortnite.send("@everyone ✅ Teste: Murilo NEWS está funcionando e pronto pra postar notícias de Fortnite!");
+    canalFortnite.send("@everyone ✅ Teste: Murilito NEWS está funcionando e pronto pra postar notícias de Fortnite!");
   }
   if (canalGTA) {
-    canalGTA.send("@everyone ✅ Teste: Murilo NEWS está funcionando e pronto pra postar notícias de GTA!");
+    canalGTA.send("@everyone ✅ Teste: Murilito NEWS está funcionando e pronto pra postar notícias de GTA!");
   }
   if (canalPromo) {
     canalPromo.send("@everyone ✅ Teste: Mensagem diária configurada!");
