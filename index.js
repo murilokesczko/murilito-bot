@@ -107,38 +107,26 @@ function normalizarUrl(url) {
 }
 
 // ======================================================
-// TRADUÇÃO GOOGLE
+// TRADUÇÃO GOOGLE — NOVO MÉTODO
 // ======================================================
 
-async function traduzirGoogle(texto) {
-  if (!texto) {
-    console.log("⚠️ Tradução recebeu texto vazio.");
-    return "";
-  }
+async function traduzirGoogleAlternativo(texto) {
+  if (!texto) return "";
+
+  const textoLimpo = String(texto).trim();
+
+  if (!textoLimpo) return "";
 
   try {
-    const textoLimpo = String(texto).trim();
-
-    if (!textoLimpo) {
-      console.log("⚠️ Texto vazio após limpeza.");
-      return "";
-    }
-
     console.log(
-      "🌐 Tradução: enviando para Google Translate..."
-    );
-
-    console.log(
-      "🇺🇸 Texto original: " +
-      textoLimpo.slice(0, 200)
+      "🌐 Google Translate alternativo: enviando texto..."
     );
 
     const url =
-      "https://translate.googleapis.com/translate_a/single" +
-      "?client=gtx" +
-      "&sl=en" +
-      "&tl=pt-BR" +
-      "&dt=t" +
+      "https://clients5.google.com/translate_a/t" +
+      "?client=dict-chrome-ex" +
+      "&sl=auto" +
+      "&tl=pt" +
       "&q=" +
       encodeURIComponent(textoLimpo);
 
@@ -153,65 +141,214 @@ async function traduzirGoogle(texto) {
     });
 
     console.log(
-      "🌐 Google Translate HTTP: " +
+      "🌐 Google Translate alternativo HTTP: " +
       resposta.status
     );
 
     if (!resposta.ok) {
       throw new Error(
-        "Google Translate HTTP " +
+        "HTTP " +
         resposta.status
       );
     }
 
-    const dados = await resposta.json();
+    const dados =
+      await resposta.json();
 
     console.log(
-      "✅ Resposta do Google Translate recebida."
+      "📦 Resposta recebida do Google alternativo."
     );
 
     if (
-      !Array.isArray(dados) ||
-      !Array.isArray(dados[0])
+      !dados ||
+      !Array.isArray(dados.sentences)
     ) {
       console.log(
-        "❌ Resposta recebida:",
+        "❌ Resposta inesperada:",
         JSON.stringify(dados).slice(0, 500)
       );
 
       throw new Error(
-        "Resposta de tradução inválida."
+        "Formato de resposta inesperado."
       );
     }
 
-    const traduzido = dados[0]
-      .map(function (parte) {
-        return parte[0];
-      })
-      .filter(Boolean)
-      .join("");
+    const traduzido =
+      dados.sentences
+        .map(function (item) {
+          return item.trans || "";
+        })
+        .filter(Boolean)
+        .join("");
 
     if (!traduzido) {
       throw new Error(
-        "Google Translate não retornou texto."
+        "Google não retornou tradução."
       );
     }
 
     console.log(
-      "🇧🇷 Tradução recebida: " +
-      traduzido.slice(0, 200)
+      "🇧🇷 Tradução Google alternativa: " +
+      traduzido.slice(0, 250)
     );
 
     return traduzido.trim();
 
   } catch (erro) {
     console.log(
-      "❌ FALHA NA TRADUÇÃO:",
+      "⚠️ Google alternativo falhou:",
       erro.message
     );
 
-    return texto;
+    return "";
   }
+}
+
+// ======================================================
+// TRADUÇÃO GOOGLE — MÉTODO ANTIGO DE RESERVA
+// ======================================================
+
+async function traduzirGoogleAntigo(texto) {
+  if (!texto) return "";
+
+  const textoLimpo = String(texto).trim();
+
+  if (!textoLimpo) return "";
+
+  try {
+    console.log(
+      "🌐 Tentando Google Translate método reserva..."
+    );
+
+    const url =
+      "https://translate.googleapis.com/translate_a/single" +
+      "?client=gtx" +
+      "&sl=auto" +
+      "&tl=pt" +
+      "&dt=t" +
+      "&q=" +
+      encodeURIComponent(textoLimpo);
+
+    const resposta = await fetch(url, {
+      method: "GET",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0",
+        "Accept":
+          "application/json,text/plain,*/*",
+      },
+    });
+
+    console.log(
+      "🌐 Google reserva HTTP: " +
+      resposta.status
+    );
+
+    if (!resposta.ok) {
+      throw new Error(
+        "HTTP " +
+        resposta.status
+      );
+    }
+
+    const dados =
+      await resposta.json();
+
+    if (
+      !Array.isArray(dados) ||
+      !Array.isArray(dados[0])
+    ) {
+      throw new Error(
+        "Resposta inválida."
+      );
+    }
+
+    const traduzido =
+      dados[0]
+        .map(function (parte) {
+          return parte[0];
+        })
+        .filter(Boolean)
+        .join("");
+
+    if (!traduzido) {
+      throw new Error(
+        "Nenhuma tradução retornada."
+      );
+    }
+
+    console.log(
+      "🇧🇷 Tradução reserva: " +
+      traduzido.slice(0, 250)
+    );
+
+    return traduzido.trim();
+
+  } catch (erro) {
+    console.log(
+      "⚠️ Google reserva falhou:",
+      erro.message
+    );
+
+    return "";
+  }
+}
+
+// ======================================================
+// FUNÇÃO PRINCIPAL DE TRADUÇÃO
+// ======================================================
+
+async function traduzirGoogle(texto) {
+  if (!texto) return "";
+
+  const textoOriginal =
+    String(texto).trim();
+
+  if (!textoOriginal) return "";
+
+  // PRIMEIRA TENTATIVA
+  const primeira =
+    await traduzirGoogleAlternativo(
+      textoOriginal
+    );
+
+  if (
+    primeira &&
+    primeira.trim() &&
+    primeira.trim().toLowerCase() !==
+      textoOriginal.trim().toLowerCase()
+  ) {
+    console.log(
+      "✅ Tradução concluída pelo Google alternativo."
+    );
+
+    return primeira.trim();
+  }
+
+  // SEGUNDA TENTATIVA
+  const segunda =
+    await traduzirGoogleAntigo(
+      textoOriginal
+    );
+
+  if (
+    segunda &&
+    segunda.trim() &&
+    segunda.trim().toLowerCase() !==
+      textoOriginal.trim().toLowerCase()
+  ) {
+    console.log(
+      "✅ Tradução concluída pelo Google reserva."
+    );
+
+    return segunda.trim();
+  }
+
+  console.log(
+    "⚠️ Nenhum método conseguiu traduzir. Mantendo original."
+  );
+
+  return textoOriginal;
 }
 
 // ======================================================
@@ -317,6 +454,7 @@ async function publicarGTA(
       );
 
     if (!canal) return false;
+
     if (!noticia.link) return false;
 
     if (!forcar) {
@@ -756,9 +894,11 @@ async function buscarNoticiasFortniteRSS() {
 
       console.log(
         "🚨 Rumor/Leak: " +
-        (rumorLeak
-          ? "SIM"
-          : "NÃO")
+        (
+          rumorLeak
+            ? "SIM"
+            : "NÃO"
+        )
       );
 
       console.log(
@@ -828,7 +968,7 @@ async function publicarFortnite(
     );
 
     console.log(
-      "📰 Título: " +
+      "📰 Título original: " +
       noticia.titulo
     );
 
@@ -838,13 +978,18 @@ async function publicarFortnite(
       );
 
     console.log(
-      "✅ Título traduzido."
+      "🇧🇷 Título traduzido: " +
+      tituloPT
     );
 
-    let descricaoPT =
-      await traduzirGoogle(
-        noticia.descricao
-      );
+    let descricaoPT = "";
+
+    if (noticia.descricao) {
+      descricaoPT =
+        await traduzirGoogle(
+          noticia.descricao
+        );
+    }
 
     if (
       descricaoPT.length > 700
@@ -911,7 +1056,7 @@ async function publicarFortnite(
 }
 
 // ======================================================
-// LOJA — NÃO ALTERADA
+// LOJA — ORIGINAL
 // ======================================================
 
 async function publicarLoja() {
@@ -1081,16 +1226,18 @@ async function processarFortnite() {
 }
 
 // ======================================================
-// TESTE EXCLUSIVO DA TRADUÇÃO
+// TESTE DE TRADUÇÃO
 // ======================================================
+
+let testeRodando = false;
 
 async function executarTesteTraducao(
   canalResposta
 ) {
   try {
     await canalResposta.send(
-      "🧪 **Teste de tradução iniciado...**\n" +
-      "Vou enviar uma frase diretamente para o Google Translate."
+      "🧪 **Testando Google Translate alternativo...**\n" +
+      "Aguarde alguns segundos."
     );
 
     const original =
@@ -1102,7 +1249,7 @@ async function executarTesteTraducao(
     );
 
     console.log(
-      "🧪 TESTE DIRETO DO GOOGLE TRANSLATE"
+      "🧪 TESTE GOOGLE TRANSLATE ALTERNATIVO"
     );
 
     console.log(
@@ -1120,7 +1267,7 @@ async function executarTesteTraducao(
       );
 
     console.log(
-      "🇧🇷 Resultado: " +
+      "🇧🇷 Resultado final: " +
       traduzido
     );
 
@@ -1129,13 +1276,15 @@ async function executarTesteTraducao(
     );
 
     if (
-      traduzido === original
+      traduzido.trim().toLowerCase() ===
+      original.trim().toLowerCase()
     ) {
       await canalResposta.send(
-        "❌ **A tradução não funcionou.**\n\n" +
-        "O Google Translate retornou o texto original.\n\n" +
-        "Veja o console do Railway para saber o HTTP/status retornado."
+        "❌ **Ainda não conseguiu traduzir.**\n\n" +
+        "O Google retornou o texto original.\n\n" +
+        "Me mande o log do Railway que aparece depois de `TESTE GOOGLE TRANSLATE ALTERNATIVO`."
       );
+
     } else {
       await canalResposta.send(
         "✅ **TRADUÇÃO FUNCIONOU!**\n\n" +
@@ -1149,13 +1298,12 @@ async function executarTesteTraducao(
 
   } catch (erro) {
     console.log(
-      "❌ Erro no teste de tradução:",
+      "❌ Erro no teste:",
       erro.message
     );
 
     await canalResposta.send(
-      "❌ **Teste de tradução falhou.**\n\n" +
-      "Erro: " +
+      "❌ **Erro no teste de tradução:**\n" +
       erro.message
     );
   }
@@ -1164,8 +1312,6 @@ async function executarTesteTraducao(
 // ======================================================
 // TESTE FORTNITE
 // ======================================================
-
-let testeRodando = false;
 
 async function executarTesteFortnite(
   canalResposta
@@ -1182,8 +1328,7 @@ async function executarTesteFortnite(
 
   try {
     await canalResposta.send(
-      "🧪 **Testando RSS + tradução do Fortnite...**\n" +
-      "Vou consultar a fonte e traduzir a primeira notícia sem publicar no canal de notícias."
+      "🧪 **Testando RSS + tradução do Fortnite...**"
     );
 
     const noticias =
@@ -1199,19 +1344,6 @@ async function executarTesteFortnite(
 
     const primeira =
       noticias[0];
-
-    console.log("");
-    console.log(
-      "========================================"
-    );
-
-    console.log(
-      "🧪 TESTE FORTNITE + TRADUÇÃO"
-    );
-
-    console.log(
-      "========================================"
-    );
 
     console.log(
       "📰 Original: " +
@@ -1238,53 +1370,38 @@ async function executarTesteFortnite(
         "...";
     }
 
-    console.log(
-      "🇧🇷 Traduzido: " +
-      tituloPT
-    );
-
-    console.log(
-      "🔗 " +
-      primeira.link
-    );
-
-    console.log(
-      "========================================"
-    );
-
-    let mensagemTeste =
+    let mensagem =
       "✅ **RSS + tradução funcionando!**\n\n";
 
     if (primeira.rumorLeak) {
-      mensagemTeste =
-        mensagemTeste +
+      mensagem =
+        mensagem +
         "🚨 **RUMOR / LEAK**\n\n";
     }
 
-    mensagemTeste =
-      mensagemTeste +
+    mensagem =
+      mensagem +
       "🇧🇷 **" +
       tituloPT +
       "**\n\n";
 
     if (descricaoPT) {
-      mensagemTeste =
-        mensagemTeste +
+      mensagem =
+        mensagem +
         "📝 " +
         descricaoPT +
         "\n\n";
     }
 
-    mensagemTeste =
-      mensagemTeste +
+    mensagem =
+      mensagem +
       "🔗 " +
       primeira.link +
       "\n\n" +
-      "📌 **Esta foi apenas uma prévia de teste. A notícia não foi publicada no canal Fortnite.**";
+      "📌 **Esta foi apenas uma prévia de teste.**";
 
     await canalResposta.send({
-      content:
-        mensagemTeste,
+      content: mensagem,
     });
 
   } catch (erro) {
@@ -1294,7 +1411,7 @@ async function executarTesteFortnite(
     );
 
     await canalResposta.send(
-      "❌ **O teste do RSS/tradução falhou.**\n\n" +
+      "❌ **O teste falhou.**\n\n" +
       "Erro: " +
       erro.message
     );
@@ -1380,9 +1497,7 @@ client.on(
         .trim()
         .toLowerCase();
 
-    // ==============================================
-    // TESTE DE TRADUÇÃO
-    // ==============================================
+    // TESTE TRADUÇÃO
 
     if (
       texto ===
@@ -1395,9 +1510,7 @@ client.on(
       return;
     }
 
-    // ==============================================
     // TESTE FORTNITE
-    // ==============================================
 
     if (
       texto ===
@@ -1410,9 +1523,7 @@ client.on(
       return;
     }
 
-    // ==============================================
     // TESTE ROCKSTAR
-    // ==============================================
 
     if (
       texto ===
@@ -1452,9 +1563,7 @@ client.on(
       return;
     }
 
-    // ==============================================
     // TESTE LIBERTYCITY
-    // ==============================================
 
     if (
       texto ===
@@ -1494,9 +1603,7 @@ client.on(
       return;
     }
 
-    // ==============================================
     // TESTE LOJA
-    // ==============================================
 
     if (
       texto ===
@@ -1507,9 +1614,7 @@ client.on(
       return;
     }
 
-    // ==============================================
-    // LISTA DE TESTES
-    // ==============================================
+    // AJUDA DE TESTES
 
     if (
       texto ===
@@ -1517,8 +1622,8 @@ client.on(
     ) {
       await message.channel.send(
         "🧪 **Testes disponíveis:**\n\n" +
-        "`!teste traducao` → testa somente a tradução\n" +
-        "`!teste fortnite` → testa RSS + tradução sem publicar\n" +
+        "`!teste traducao` → testa Google Translate\n" +
+        "`!teste fortnite` → testa RSS + tradução\n" +
         "`!teste rockstar` → publica uma notícia Rockstar\n" +
         "`!teste liberty` → publica uma notícia LibertyCity\n" +
         "`!teste loja` → testa a loja"
@@ -1527,9 +1632,7 @@ client.on(
       return;
     }
 
-    // ==============================================
     // PIADA
-    // ==============================================
 
     if (
       texto ===
@@ -1556,9 +1659,7 @@ client.on(
       return;
     }
 
-    // ==============================================
     // AJUDA
-    // ==============================================
 
     if (
       texto ===
