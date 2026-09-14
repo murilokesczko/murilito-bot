@@ -2,7 +2,6 @@ require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const Parser = require('rss-parser');
 const axios = require('axios');
-const cheerio = require('cheerio');
 const parser = new Parser();
 
 const client = new Client({
@@ -51,7 +50,7 @@ client.once('ready', () => {
   canalPromo?.send("🤖 Murilito reiniciou! Teste de postagem no canal Promoções.");
   canalEnquete?.send("🤖 Murilito reiniciou! Teste de postagem no canal Enquetes.");
 
-  // Funções de postagem
+  // Funções de postagem de notícias
   async function postarFortnite() {
     try {
       const feed = await parser.parseURL('https://fortnite.gg/news/rss');
@@ -114,55 +113,62 @@ client.once('ready', () => {
       canalPromo.send({ content: "@everyone Murilito lembra: apoiar nunca sai de moda 😎", embeds: [embed] });
     }
   }
+  // Função para postar loja do Fortnite usando API oficial
   async function postarLojaFortnite() {
     if (canalPromo) {
       try {
-        const { data } = await axios.get('https://fortnite.gg/shop');
-        const $ = cheerio.load(data);
-        $('.shop-section .shop-item').each((i, el) => {
-          const nome = $(el).find('.shop-item-name').text();
-          const preco = $(el).find('.shop-item-price').text();
-          const imagem = $(el).find('img').attr('src');
-          if (!nome || !imagem) return;
+        const { data } = await axios.get('https://fortnite-api.com/v2/shop/br');
+        const itens = data.data.entries;
+
+        for (const item of itens.slice(0, 5)) { // posta até 5 itens
+          const nome = item.items[0].name;
+          const preco = item.finalPrice;
+          const imagem = item.items[0].images.icon;
+
           const frase = frasesFortnite[Math.floor(Math.random() * frasesFortnite.length)];
+
           const embed = {
             title: nome,
-            description: `💰 Preço: ${preco}\n🛒 Use o código **TIOKHREBIS** na loja!`,
+            description: `💰 Preço: ${preco} V-Bucks\n🛒 Use o código **TIOKHREBIS** na loja!`,
             color: 0x2ecc71,
             image: { url: imagem }
           };
+
           canalPromo.send({ content: "@everyone 🛍️ **Loja Fortnite Atualizada!**\n" + frase, embeds: [embed] });
-        });
+        }
       } catch (err) { console.error("Erro ao buscar loja Fortnite:", err); }
     }
   }
 
+  // Função para postar enquete da loja (aleatória) usando API oficial
   async function postarEnqueteLoja() {
     if (canalEnquete) {
       try {
-        const { data } = await axios.get('https://fortnite.gg/shop');
-        const $ = cheerio.load(data);
-        const itens = [];
-        $('.shop-section .shop-item').each((i, el) => {
-          const nome = $(el).find('.shop-item-name').text();
-          const preco = $(el).find('.shop-item-price').text();
-          const imagem = $(el).find('img').attr('src');
-          if (nome && imagem) itens.push({ nome, preco, imagem });
-        });
+        const { data } = await axios.get('https://fortnite-api.com/v2/shop/br');
+        const itens = data.data.entries;
+
+        // Sorteia 3 skins aleatórias
         const selecionados = [];
         while (selecionados.length < 3 && itens.length > 0) {
           const index = Math.floor(Math.random() * itens.length);
           selecionados.push(itens[index]);
           itens.splice(index, 1);
         }
+
         canalEnquete.send("📊 **Enquete da Loja Fortnite**\nVote na skin que você mais gostou!");
+
         for (const item of selecionados) {
+          const nome = item.items[0].name;
+          const preco = item.finalPrice;
+          const imagem = item.items[0].images.icon;
+
           const embed = {
-            title: item.nome,
-            description: `💰 Preço: ${item.preco}\n🛒 Use o código **TIOKHREBIS** na loja!`,
+            title: nome,
+            description: `💰 Preço: ${preco} V-Bucks\n🛒 Use o código **TIOKHREBIS** na loja!`,
             color: 0x9b59b6,
-            image: { url: item.imagem }
+            image: { url: imagem }
           };
+
           const msg = await canalEnquete.send({ embeds: [embed] });
           await msg.react("🔥");
           await msg.react("👍");
@@ -191,7 +197,7 @@ client.once('ready', () => {
   setInterval(postarFortnite, 600000);
   setInterval(postarLibertyCity, 600000);
   setInterval(postarRockstar, 600000);
-}); // <-- fecha o client.once('ready')
+}); // fecha client.once('ready')
 
 
 // Interatividade e humor
@@ -207,29 +213,31 @@ client.on('messageCreate', async (message) => {
   // Comando de enquete manual
   if (message.content.toLowerCase() === '!enquete') {
     try {
-      const { data } = await axios.get('https://fortnite.gg/shop');
-      const $ = cheerio.load(data);
-      const itens = [];
-      $('.shop-section .shop-item').each((i, el) => {
-        const nome = $(el).find('.shop-item-name').text();
-        const preco = $(el).find('.shop-item-price').text();
-        const imagem = $(el).find('img').attr('src');
-        if (nome && imagem) itens.push({ nome, preco, imagem });
-      });
+      const { data } = await axios.get('https://fortnite-api.com/v2/shop/br');
+      const itens = data.data.entries;
+
+      // Sorteia 3 skins aleatórias
       const selecionados = [];
       while (selecionados.length < 3 && itens.length > 0) {
         const index = Math.floor(Math.random() * itens.length);
         selecionados.push(itens[index]);
         itens.splice(index, 1);
       }
+
       await message.channel.send("📊 **Enquete da Loja Fortnite**\nVote na skin que você mais gostou!");
+
       for (const item of selecionados) {
+        const nome = item.items[0].name;
+        const preco = item.finalPrice;
+        const imagem = item.items[0].images.icon;
+
         const embed = {
-          title: item.nome,
-          description: `💰 Preço: ${item.preco}\n🛒 Use o código **TIOKHREBIS** na loja!`,
+          title: nome,
+          description: `💰 Preço: ${preco} V-Bucks\n🛒 Use o código **TIOKHREBIS** na loja!`,
           color: 0x9b59b6,
-          image: { url: item.imagem }
+          image: { url: imagem }
         };
+
         const msg = await message.channel.send({ embeds: [embed] });
         await msg.react("🔥");
         await msg.react("👍");
