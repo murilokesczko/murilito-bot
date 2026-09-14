@@ -44,7 +44,7 @@ const frasesFortnite = [
   "💸 Promoção imperdível: risadas grátis junto com a skin!",
   "Murilito recomenda: compre duas skins e ganhe uma piada!"
 ];
-// Funções de postagem com scraping
+// Funções de postagem com scraping e seletores específicos
 async function postarFortnite(channel) {
   try {
     const feed = await parser.parseURL('https://fortnite.gg/news/rss');
@@ -56,7 +56,7 @@ async function postarFortnite(channel) {
 
     const response = await axios.get(noticia.link);
     const $ = cheerio.load(response.data);
-    const textoCompleto = $('article').text().trim().slice(0, 1000);
+    const textoCompleto = $('.post-content, .content').text().trim().slice(0, 1000);
 
     const embed = {
       title: noticia.title || "Notícia Fortnite",
@@ -82,7 +82,7 @@ async function postarLibertyCity(channel) {
 
     const response = await axios.get(noticia.link);
     const $ = cheerio.load(response.data);
-    const textoCompleto = $('article').text().trim().slice(0, 1000);
+    const textoCompleto = $('.news-text, .content').text().trim().slice(0, 1000);
 
     const embed = {
       title: noticia.title || "Notícia LibertyCity",
@@ -108,7 +108,7 @@ async function postarRockstar(channel) {
 
     const response = await axios.get(noticia.link);
     const $ = cheerio.load(response.data);
-    const textoCompleto = $('article').text().trim().slice(0, 1000);
+    const textoCompleto = $('.article-body .content, .content').text().trim().slice(0, 1000);
 
     const embed = {
       title: noticia.title || "Notícia Rockstar",
