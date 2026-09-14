@@ -14,23 +14,19 @@ const client = new Client({
 });
 
 client.once('ready', () => {
-  console.log(`✅ Bot conectado como ${client.user.tag}`);
+  console.log(`✅ Murilito NEWS conectado como ${client.user.tag}`);
 
   // IDs dos canais
   const canalFortnite = client.channels.cache.get("1517339263216390164");
   const canalGTA = client.channels.cache.get("1520508956978712576");
   const canalPromo = client.channels.cache.get("1517333302032470191");
 
-  // Mensagens de teste ao iniciar
-  if (canalFortnite) canalFortnite.send("@everyone ✅ Teste: Murilito NEWS pronto para Fortnite!");
-  if (canalGTA) canalGTA.send("@everyone ✅ Teste: Murilito NEWS pronto para GTA!");
-  if (canalPromo) canalPromo.send("@everyone ✅ Teste: Promoções e Loja configuradas!");
-
   // Função para postar notícias do Fortnite
   async function postarFortnite() {
     try {
       const feed = await parser.parseURL('https://fortnite.gg/news/rss');
       const noticia = feed.items[0];
+      if (!noticia) return;
 
       const embed = {
         title: noticia.title,
@@ -40,7 +36,7 @@ client.once('ready', () => {
         image: { url: noticia.enclosure?.url }
       };
 
-      canalFortnite.send({ content: "@everyone", embeds: [embed] });
+      canalFortnite?.send({ content: "@everyone", embeds: [embed] });
     } catch (err) {
       console.error('Erro ao buscar Fortnite:', err);
     }
@@ -51,6 +47,7 @@ client.once('ready', () => {
     try {
       const feed = await parser.parseURL('https://pt.libertycity.net/news/rss');
       const noticia = feed.items[0];
+      if (!noticia) return;
 
       const embed = {
         title: noticia.title,
@@ -60,7 +57,7 @@ client.once('ready', () => {
         image: { url: noticia.enclosure?.url }
       };
 
-      canalGTA.send({ content: "@everyone", embeds: [embed] });
+      canalGTA?.send({ content: "@everyone", embeds: [embed] });
     } catch (err) {
       console.error('Erro ao buscar LibertyCity:', err);
     }
@@ -71,6 +68,7 @@ client.once('ready', () => {
     try {
       const feed = await parser.parseURL('https://www.rockstargames.com/br/newswire/rss');
       const noticia = feed.items[0];
+      if (!noticia) return;
 
       const embed = {
         title: noticia.title,
@@ -80,7 +78,7 @@ client.once('ready', () => {
         image: { url: noticia.enclosure?.url }
       };
 
-      canalGTA.send({ content: "@everyone", embeds: [embed] });
+      canalGTA?.send({ content: "@everyone", embeds: [embed] });
     } catch (err) {
       console.error('Erro ao buscar Rockstar:', err);
     }
@@ -112,6 +110,8 @@ client.once('ready', () => {
           const nome = $(el).find('.shop-item-name').text();
           const preco = $(el).find('.shop-item-price').text();
           const imagem = $(el).find('img').attr('src');
+
+          if (!nome || !imagem) return;
 
           const embed = {
             title: nome,
