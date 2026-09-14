@@ -9,10 +9,6 @@ const {
 const puppeteer = require("puppeteer");
 const Parser = require("rss-parser");
 
-// ======================================================
-// CONFIGURAÇÕES
-// ======================================================
-
 const TOKEN = process.env.TOKEN;
 
 const ID_LOJA = "1517333302032470191";
@@ -20,10 +16,6 @@ const ID_FORTNITE = "1517339263216390164";
 const ID_GTA = "1520508956978712576";
 
 const RSS_FORTNITE = "https://fortnitenews.com/rss";
-
-// ======================================================
-// CLIENT DISCORD
-// ======================================================
 
 const client = new Client({
   intents: [
@@ -33,20 +25,16 @@ const client = new Client({
   ],
 });
 
-// ======================================================
-// RSS
-// ======================================================
-
 const rssParser = new Parser({
   timeout: 15000,
 });
 
-// ======================================================
-// NAVEGADOR
-// ======================================================
-
 let browser = null;
 let browserPromise = null;
+
+// ======================================================
+// PUPPETEER
+// ======================================================
 
 async function getBrowser() {
   if (browser) {
@@ -119,16 +107,31 @@ function normalizarUrl(url) {
 }
 
 // ======================================================
-// TRADUÇÃO PT-BR
+// TRADUÇÃO GOOGLE
 // ======================================================
 
 async function traduzirGoogle(texto) {
-  if (!texto) return "";
+  if (!texto) {
+    console.log("⚠️ Tradução recebeu texto vazio.");
+    return "";
+  }
 
   try {
     const textoLimpo = String(texto).trim();
 
-    if (!textoLimpo) return "";
+    if (!textoLimpo) {
+      console.log("⚠️ Texto vazio após limpeza.");
+      return "";
+    }
+
+    console.log(
+      "🌐 Tradução: enviando para Google Translate..."
+    );
+
+    console.log(
+      "🇺🇸 Texto original: " +
+      textoLimpo.slice(0, 200)
+    );
 
     const url =
       "https://translate.googleapis.com/translate_a/single" +
@@ -142,9 +145,17 @@ async function traduzirGoogle(texto) {
     const resposta = await fetch(url, {
       method: "GET",
       headers: {
-        "User-Agent": "Mozilla/5.0",
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
+        "Accept":
+          "application/json,text/plain,*/*",
       },
     });
+
+    console.log(
+      "🌐 Google Translate HTTP: " +
+      resposta.status
+    );
 
     if (!resposta.ok) {
       throw new Error(
@@ -155,10 +166,19 @@ async function traduzirGoogle(texto) {
 
     const dados = await resposta.json();
 
+    console.log(
+      "✅ Resposta do Google Translate recebida."
+    );
+
     if (
       !Array.isArray(dados) ||
       !Array.isArray(dados[0])
     ) {
+      console.log(
+        "❌ Resposta recebida:",
+        JSON.stringify(dados).slice(0, 500)
+      );
+
       throw new Error(
         "Resposta de tradução inválida."
       );
@@ -177,10 +197,16 @@ async function traduzirGoogle(texto) {
       );
     }
 
+    console.log(
+      "🇧🇷 Tradução recebida: " +
+      traduzido.slice(0, 200)
+    );
+
     return traduzido.trim();
+
   } catch (erro) {
     console.log(
-      "⚠️ Falha na tradução:",
+      "❌ FALHA NA TRADUÇÃO:",
       erro.message
     );
 
@@ -265,6 +291,7 @@ async function noticiaJaPublicada(
     }
 
     return false;
+
   } catch (erro) {
     console.log(
       "⚠️ Não foi possível verificar duplicação:",
@@ -290,7 +317,6 @@ async function publicarGTA(
       );
 
     if (!canal) return false;
-
     if (!noticia.link) return false;
 
     if (!forcar) {
@@ -329,6 +355,7 @@ async function publicarGTA(
     );
 
     return true;
+
   } catch (erro) {
     console.log(
       "❌ Erro publicando GTA:",
@@ -396,8 +423,9 @@ async function buscarNoticiasRockstar() {
           if (
             !href ||
             vistos.has(href)
-          )
+          ) {
             continue;
+          }
 
           vistos.add(href);
 
@@ -454,6 +482,7 @@ async function buscarNoticiasRockstar() {
     );
 
     return noticias;
+
   } catch (erro) {
     console.log(
       "❌ Erro buscando Rockstar:",
@@ -521,8 +550,9 @@ async function buscarNoticiasLibertyCity() {
           if (
             !href ||
             vistos.has(href)
-          )
+          ) {
             continue;
+          }
 
           if (
             !href.includes(
@@ -570,6 +600,7 @@ async function buscarNoticiasLibertyCity() {
     );
 
     return noticias;
+
   } catch (erro) {
     console.log(
       "❌ Erro buscando LibertyCity:",
@@ -582,7 +613,6 @@ async function buscarNoticiasLibertyCity() {
 
 // ======================================================
 // FORTNITE — RSS
-// SEM TEMPLATE LITERALS
 // ======================================================
 
 async function buscarNoticiasFortniteRSS() {
@@ -726,7 +756,9 @@ async function buscarNoticiasFortniteRSS() {
 
       console.log(
         "🚨 Rumor/Leak: " +
-        (rumorLeak ? "SIM" : "NÃO")
+        (rumorLeak
+          ? "SIM"
+          : "NÃO")
       );
 
       console.log(
@@ -735,6 +767,7 @@ async function buscarNoticiasFortniteRSS() {
     }
 
     return noticias;
+
   } catch (erro) {
     console.log(
       "❌ ERRO NO RSS DO FORTNITE:"
@@ -750,7 +783,6 @@ async function buscarNoticiasFortniteRSS() {
 
 // ======================================================
 // PUBLICAR FORTNITE
-// SEM TEMPLATE LITERALS
 // ======================================================
 
 async function publicarFortnite(
@@ -792,15 +824,22 @@ async function publicarFortnite(
     }
 
     console.log(
-      "🎮 Fortnite: traduzindo \"" +
-      noticia.titulo +
-      "\""
+      "🎮 Fortnite: iniciando tradução..."
+    );
+
+    console.log(
+      "📰 Título: " +
+      noticia.titulo
     );
 
     const tituloPT =
       await traduzirGoogle(
         noticia.titulo
       );
+
+    console.log(
+      "✅ Título traduzido."
+    );
 
     let descricaoPT =
       await traduzirGoogle(
@@ -860,6 +899,7 @@ async function publicarFortnite(
     );
 
     return true;
+
   } catch (erro) {
     console.log(
       "❌ Erro publicando Fortnite:",
@@ -871,8 +911,7 @@ async function publicarFortnite(
 }
 
 // ======================================================
-// LOJA FORTNITE
-// MANTIDA COMO ESTÁ — NÃO ALTERADA
+// LOJA — NÃO ALTERADA
 // ======================================================
 
 async function publicarLoja() {
@@ -918,6 +957,7 @@ async function publicarLoja() {
     );
 
     return true;
+
   } catch (erro) {
     console.log(
       "❌ Erro publicando loja:",
@@ -929,8 +969,7 @@ async function publicarLoja() {
 }
 
 // ======================================================
-// PROCESSAR GTA
-// CONGELADO
+// PROCESSAR GTA — CONGELADO
 // ======================================================
 
 async function processarGTA() {
@@ -1042,81 +1081,88 @@ async function processarFortnite() {
 }
 
 // ======================================================
-// CICLO AUTOMÁTICO
+// TESTE EXCLUSIVO DA TRADUÇÃO
 // ======================================================
 
-let cicloRodando = false;
-
-async function cicloNoticias() {
-  if (cicloRodando) {
-    console.log(
-      "⏭️ Ciclo já está rodando. Ignorando novo ciclo."
-    );
-
-    return;
-  }
-
-  cicloRodando = true;
-
+async function executarTesteTraducao(
+  canalResposta
+) {
   try {
+    await canalResposta.send(
+      "🧪 **Teste de tradução iniciado...**\n" +
+      "Vou enviar uma frase diretamente para o Google Translate."
+    );
+
+    const original =
+      "Fortnite Hotfix Adjusts the 8-Bit Shotgun";
+
+    console.log("");
     console.log(
-      "📰 INICIANDO CICLO DE NOTÍCIAS"
+      "========================================"
     );
 
     console.log(
-      "🇧🇷 " +
-      new Date().toLocaleString(
-        "pt-BR"
-      )
-    );
-
-    // ==================================================
-    // GTA — NÃO ALTERADO
-    // ==================================================
-
-    const totalGTA =
-      await processarGTA();
-
-    // ==================================================
-    // FORTNITE — RSS ATIVO
-    // ==================================================
-
-    console.log(
-      "━━━━━━━━ Fortnite ━━━━━━━━"
-    );
-
-    const totalFortnite =
-      await processarFortnite();
-
-    console.log(
-      "📊 GTA TOTAL: " +
-      totalGTA +
-      " notícia(s) nova(s) publicada(s)."
+      "🧪 TESTE DIRETO DO GOOGLE TRANSLATE"
     );
 
     console.log(
-      "📊 FORTNITE TOTAL: " +
-      totalFortnite +
-      " notícia(s) nova(s) publicada(s)."
+      "========================================"
     );
 
     console.log(
-      "📰 CICLO FINALIZADO"
+      "🇺🇸 Original: " +
+      original
     );
+
+    const traduzido =
+      await traduzirGoogle(
+        original
+      );
+
+    console.log(
+      "🇧🇷 Resultado: " +
+      traduzido
+    );
+
+    console.log(
+      "========================================"
+    );
+
+    if (
+      traduzido === original
+    ) {
+      await canalResposta.send(
+        "❌ **A tradução não funcionou.**\n\n" +
+        "O Google Translate retornou o texto original.\n\n" +
+        "Veja o console do Railway para saber o HTTP/status retornado."
+      );
+    } else {
+      await canalResposta.send(
+        "✅ **TRADUÇÃO FUNCIONOU!**\n\n" +
+        "🇺🇸 **Original:**\n" +
+        original +
+        "\n\n" +
+        "🇧🇷 **Português:**\n" +
+        traduzido
+      );
+    }
 
   } catch (erro) {
     console.log(
-      "❌ Erro no ciclo:",
+      "❌ Erro no teste de tradução:",
       erro.message
     );
 
-  } finally {
-    cicloRodando = false;
+    await canalResposta.send(
+      "❌ **Teste de tradução falhou.**\n\n" +
+      "Erro: " +
+      erro.message
+    );
   }
 }
 
 // ======================================================
-// TESTES
+// TESTE FORTNITE
 // ======================================================
 
 let testeRodando = false;
@@ -1237,7 +1283,8 @@ async function executarTesteFortnite(
       "📌 **Esta foi apenas uma prévia de teste. A notícia não foi publicada no canal Fortnite.**";
 
     await canalResposta.send({
-      content: mensagemTeste,
+      content:
+        mensagemTeste,
     });
 
   } catch (erro) {
@@ -1258,6 +1305,67 @@ async function executarTesteFortnite(
 }
 
 // ======================================================
+// CICLO AUTOMÁTICO
+// ======================================================
+
+let cicloRodando = false;
+
+async function cicloNoticias() {
+  if (cicloRodando) {
+    console.log(
+      "⏭️ Ciclo já está rodando. Ignorando novo ciclo."
+    );
+
+    return;
+  }
+
+  cicloRodando = true;
+
+  try {
+    console.log(
+      "📰 INICIANDO CICLO DE NOTÍCIAS"
+    );
+
+    console.log(
+      `🇧🇷 ${new Date().toLocaleString(
+        "pt-BR"
+      )}`
+    );
+
+    const totalGTA =
+      await processarGTA();
+
+    console.log(
+      "━━━━━━━━ Fortnite ━━━━━━━━"
+    );
+
+    const totalFortnite =
+      await processarFortnite();
+
+    console.log(
+      `📊 GTA TOTAL: ${totalGTA} notícia(s) nova(s) publicada(s).`
+    );
+
+    console.log(
+      `📊 FORTNITE TOTAL: ${totalFortnite} notícia(s) nova(s) publicada(s).`
+    );
+
+    console.log(
+      "📰 CICLO FINALIZADO"
+    );
+
+  } catch (erro) {
+    console.log(
+      "❌ Erro no ciclo:",
+      erro.message
+    );
+
+  } finally {
+    cicloRodando = false;
+  }
+}
+
+// ======================================================
 // COMANDOS
 // ======================================================
 
@@ -1272,6 +1380,25 @@ client.on(
         .trim()
         .toLowerCase();
 
+    // ==============================================
+    // TESTE DE TRADUÇÃO
+    // ==============================================
+
+    if (
+      texto ===
+      "!teste traducao"
+    ) {
+      await executarTesteTraducao(
+        message.channel
+      );
+
+      return;
+    }
+
+    // ==============================================
+    // TESTE FORTNITE
+    // ==============================================
+
     if (
       texto ===
       "!teste fortnite"
@@ -1282,6 +1409,10 @@ client.on(
 
       return;
     }
+
+    // ==============================================
+    // TESTE ROCKSTAR
+    // ==============================================
 
     if (
       texto ===
@@ -1313,12 +1444,17 @@ client.on(
           noticias[0],
           true
         );
+
       } finally {
         testeRodando = false;
       }
 
       return;
     }
+
+    // ==============================================
+    // TESTE LIBERTYCITY
+    // ==============================================
 
     if (
       texto ===
@@ -1350,12 +1486,17 @@ client.on(
           noticias[0],
           true
         );
+
       } finally {
         testeRodando = false;
       }
 
       return;
     }
+
+    // ==============================================
+    // TESTE LOJA
+    // ==============================================
 
     if (
       texto ===
@@ -1366,20 +1507,29 @@ client.on(
       return;
     }
 
+    // ==============================================
+    // LISTA DE TESTES
+    // ==============================================
+
     if (
       texto ===
       "!teste"
     ) {
       await message.channel.send(
         "🧪 **Testes disponíveis:**\n\n" +
-        "!teste fortnite → testa RSS + tradução sem publicar\n" +
-        "!teste rockstar → publica uma notícia Rockstar\n" +
-        "!teste liberty → publica uma notícia LibertyCity\n" +
-        "!teste loja → testa a loja"
+        "`!teste traducao` → testa somente a tradução\n" +
+        "`!teste fortnite` → testa RSS + tradução sem publicar\n" +
+        "`!teste rockstar` → publica uma notícia Rockstar\n" +
+        "`!teste liberty` → publica uma notícia LibertyCity\n" +
+        "`!teste loja` → testa a loja"
       );
 
       return;
     }
+
+    // ==============================================
+    // PIADA
+    // ==============================================
 
     if (
       texto ===
@@ -1406,18 +1556,23 @@ client.on(
       return;
     }
 
+    // ==============================================
+    // AJUDA
+    // ==============================================
+
     if (
       texto ===
       "!ajuda"
     ) {
       await message.channel.send(
         "🤖 **Murilito NEWS**\n\n" +
-        "!teste fortnite\n" +
-        "!teste rockstar\n" +
-        "!teste liberty\n" +
-        "!teste loja\n" +
-        "!piada\n" +
-        "!ajuda"
+        "`!teste traducao`\n" +
+        "`!teste fortnite`\n" +
+        "`!teste rockstar`\n" +
+        "`!teste liberty`\n" +
+        "`!teste loja`\n" +
+        "`!piada`\n" +
+        "`!ajuda`"
       );
 
       return;
@@ -1456,21 +1611,12 @@ client.once(
       cicloNoticias();
     }, 10000);
 
-    // ==================================================
-    // CICLO A CADA 10 MINUTOS
-    // ==================================================
-
     setInterval(
       () => {
         cicloNoticias();
       },
       10 * 60 * 1000
     );
-
-    // ==================================================
-    // LOJA ÀS 21:00
-    // MANTIDA COMO ESTAVA
-    // ==================================================
 
     let ultimaLoja = "";
 
