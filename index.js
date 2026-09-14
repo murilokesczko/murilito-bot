@@ -62,7 +62,7 @@ async function getBrowser() {
     return browserPromise;
   }
 
-  browserPromise = (async () => {
+  browserPromise = (async function () {
     console.log("🌐 Iniciando navegador Puppeteer...");
 
     const novoBrowser = await puppeteer.launch({
@@ -114,24 +114,25 @@ function normalizarUrl(url) {
 
   try {
     return new URL(url).href;
-  } catch {
+  } catch (erro) {
     return url;
   }
 }
 
 // ======================================================
 // TRADUÇÃO PT-BR
+// SEM TEMPLATE LITERALS
 // ======================================================
 
 async function traduzirGoogle(texto) {
   if (!texto) return "";
 
   try {
-    const textoLimpo = String(texto).trim();
+    var textoLimpo = String(texto).trim();
 
     if (!textoLimpo) return "";
 
-    const url =
+    var url =
       "https://translate.googleapis.com/translate_a/single" +
       "?client=gtx" +
       "&sl=en" +
@@ -140,7 +141,7 @@ async function traduzirGoogle(texto) {
       "&q=" +
       encodeURIComponent(textoLimpo);
 
-    const resposta = await fetch(url, {
+    var resposta = await fetch(url, {
       method: "GET",
       headers: {
         "User-Agent": "Mozilla/5.0",
@@ -149,11 +150,12 @@ async function traduzirGoogle(texto) {
 
     if (!resposta.ok) {
       throw new Error(
-        "Google Translate HTTP " + resposta.status
+        "Google Translate HTTP " +
+          resposta.status
       );
     }
 
-    const dados = await resposta.json();
+    var dados = await resposta.json();
 
     if (
       !Array.isArray(dados) ||
@@ -164,8 +166,10 @@ async function traduzirGoogle(texto) {
       );
     }
 
-    const traduzido = dados[0]
-      .map((parte) => parte[0])
+    var traduzido = dados[0]
+      .map(function (parte) {
+        return parte[0];
+      })
       .filter(Boolean)
       .join("");
 
@@ -188,12 +192,22 @@ async function traduzirGoogle(texto) {
 
 // ======================================================
 // DETECTAR RUMOR / LEAK
+// SEM TEMPLATE LITERALS
 // ======================================================
 
-function detectarRumorLeak(titulo, descricao = "") {
-  const texto = `${titulo} ${descricao}`.toLowerCase();
+function detectarRumorLeak(
+  titulo,
+  descricao
+) {
+  var texto =
+    String(titulo || "") +
+    " " +
+    String(descricao || "");
 
-  const palavras = [
+  var textoMinusculo =
+    texto.toLowerCase();
+
+  var palavras = [
     "leak",
     "leaked",
     "leaks",
@@ -206,9 +220,11 @@ function detectarRumorLeak(titulo, descricao = "") {
     "unconfirmed",
   ];
 
-  return palavras.some((palavra) =>
-    texto.includes(palavra)
-  );
+  return palavras.some(function (palavra) {
+    return textoMinusculo.includes(
+      palavra
+    );
+  });
 }
 
 // ======================================================
@@ -221,15 +237,17 @@ async function noticiaJaPublicada(
   titulo
 ) {
   try {
-    const mensagens =
+    var mensagens =
       await canal.messages.fetch({
         limit: 50,
       });
 
-    const linkNormalizado =
+    var linkNormalizado =
       normalizarUrl(link);
 
-    for (const [, mensagem] of mensagens) {
+    for (
+      const [, mensagem] of mensagens
+    ) {
       if (!mensagem.content) continue;
 
       if (
@@ -245,7 +263,9 @@ async function noticiaJaPublicada(
         titulo &&
         mensagem.content
           .toLowerCase()
-          .includes(titulo.toLowerCase())
+          .includes(
+            titulo.toLowerCase()
+          )
       ) {
         return true;
       }
@@ -268,10 +288,10 @@ async function noticiaJaPublicada(
 
 async function publicarGTA(
   noticia,
-  forcar = false
+  forcar
 ) {
   try {
-    const canal =
+    var canal =
       await client.channels.fetch(
         ID_GTA
       );
@@ -281,7 +301,7 @@ async function publicarGTA(
     if (!noticia.link) return false;
 
     if (!forcar) {
-      const duplicada =
+      var duplicada =
         await noticiaJaPublicada(
           canal,
           noticia.link,
@@ -290,7 +310,8 @@ async function publicarGTA(
 
       if (duplicada) {
         console.log(
-          `⏭️ GTA: já publicada: ${noticia.titulo}`
+          "⏭️ GTA: já publicada: " +
+            noticia.titulo
         );
 
         return false;
@@ -298,21 +319,25 @@ async function publicarGTA(
     }
 
     console.log(
-      `🚔 GTA enviando link: ${noticia.link}`
+      "🚔 GTA enviando link: " +
+        noticia.link
     );
 
     await canal.send({
       content:
-        `@everyone 📰 **Acabou de sair notícia nova do GTA!**\n\n` +
-        `${noticia.link}\n\n` +
-        `👇 **Clique no título acima para ler a matéria completa.**`,
+        "@everyone 📰 **Acabou de sair notícia nova do GTA!**\n\n" +
+        noticia.link +
+        "\n\n" +
+        "👇 **Clique no título acima para ler a matéria completa.**",
+
       allowedMentions: {
         parse: ["everyone"],
       },
     });
 
     console.log(
-      `✅ GTA publicada com prévia do Discord: ${noticia.titulo}`
+      "✅ GTA publicada com prévia do Discord: " +
+        noticia.titulo
     );
 
     return true;
@@ -336,13 +361,13 @@ async function buscarNoticiasRockstar() {
       "🌐 Rockstar: https://www.rockstargames.com/br/newswire"
     );
 
-    const browser =
+    var browserAtual =
       await getBrowser();
 
-    const page =
-      await browser.newPage();
+    var page =
+      await browserAtual.newPage();
 
-    const resposta =
+    var resposta =
       await page.goto(
         "https://www.rockstargames.com/br/newswire",
         {
@@ -353,42 +378,51 @@ async function buscarNoticiasRockstar() {
       );
 
     console.log(
-      `🌐 Rockstar status: ${
-        resposta
+      "🌐 Rockstar status: " +
+        (resposta
           ? resposta.status()
-          : "?"
-      }`
+          : "?")
     );
 
     await new Promise(
-      (resolve) =>
-        setTimeout(resolve, 3000)
+      function (resolve) {
+        setTimeout(
+          resolve,
+          3000
+        );
+      }
     );
 
-    const noticias =
-      await page.evaluate(() => {
-        const resultados = [];
+    var noticias =
+      await page.evaluate(function () {
+        var resultados = [];
 
-        const links =
+        var links =
           document.querySelectorAll(
             'a[href*="/newswire/article/"]'
           );
 
-        const vistos =
-          new Set();
+        var vistos = new Set();
 
-        for (const link of links) {
-          const href = link.href;
+        for (
+          var i = 0;
+          i < links.length;
+          i++
+        ) {
+          var link = links[i];
+
+          var href = link.href;
 
           if (
             !href ||
             vistos.has(href)
-          )
+          ) {
             continue;
+          }
 
           vistos.add(href);
 
-          let titulo =
+          var titulo =
             link.innerText ||
             link.textContent ||
             "";
@@ -398,26 +432,29 @@ async function buscarNoticiasRockstar() {
             .trim();
 
           if (!titulo) {
-            const parent =
+            var parent =
               link.closest(
                 "article, div"
               );
 
             if (parent) {
               titulo =
-                parent.innerText
-                  ?.replace(
+                (
+                  parent.innerText ||
+                  ""
+                )
+                  .replace(
                     /\s+/g,
                     " "
                   )
-                  .trim() || "";
+                  .trim();
             }
           }
 
           if (!titulo) continue;
 
           resultados.push({
-            titulo,
+            titulo: titulo,
             link: href,
           });
         }
@@ -430,14 +467,19 @@ async function buscarNoticiasRockstar() {
 
     await page.close();
 
-    for (const noticia of noticias) {
+    for (
+      const noticia of noticias
+    ) {
       console.log(
-        `📰 Rockstar candidato: ${noticia.titulo}`
+        "📰 Rockstar candidato: " +
+          noticia.titulo
       );
     }
 
     console.log(
-      `🔎 Rockstar: ${noticias.length} candidatos encontrados.`
+      "🔎 Rockstar: " +
+        noticias.length +
+        " candidatos encontrados."
     );
 
     return noticias;
@@ -461,13 +503,13 @@ async function buscarNoticiasLibertyCity() {
       "🔎 LibertyCity: procurando SOMENTE notícias..."
     );
 
-    const browser =
+    var browserAtual =
       await getBrowser();
 
-    const page =
-      await browser.newPage();
+    var page =
+      await browserAtual.newPage();
 
-    const resposta =
+    var resposta =
       await page.goto(
         "https://pt.libertycity.net/news/",
         {
@@ -478,38 +520,47 @@ async function buscarNoticiasLibertyCity() {
       );
 
     console.log(
-      `🌐 LibertyCity status: ${
-        resposta
+      "🌐 LibertyCity status: " +
+        (resposta
           ? resposta.status()
-          : "?"
-      }`
+          : "?")
     );
 
     await new Promise(
-      (resolve) =>
-        setTimeout(resolve, 2000)
+      function (resolve) {
+        setTimeout(
+          resolve,
+          2000
+        );
+      }
     );
 
-    const noticias =
-      await page.evaluate(() => {
-        const resultados = [];
+    var noticias =
+      await page.evaluate(function () {
+        var resultados = [];
 
-        const links =
+        var links =
           document.querySelectorAll(
             'a[href*="/news/"]'
           );
 
-        const vistos =
-          new Set();
+        var vistos = new Set();
 
-        for (const link of links) {
-          const href = link.href;
+        for (
+          var i = 0;
+          i < links.length;
+          i++
+        ) {
+          var link = links[i];
+
+          var href = link.href;
 
           if (
             !href ||
             vistos.has(href)
-          )
+          ) {
             continue;
+          }
 
           if (
             !href.includes(
@@ -527,7 +578,7 @@ async function buscarNoticiasLibertyCity() {
 
           vistos.add(href);
 
-          let titulo =
+          var titulo =
             link.innerText ||
             link.textContent ||
             "";
@@ -539,7 +590,7 @@ async function buscarNoticiasLibertyCity() {
           if (!titulo) continue;
 
           resultados.push({
-            titulo,
+            titulo: titulo,
             link: href,
           });
         }
@@ -553,7 +604,9 @@ async function buscarNoticiasLibertyCity() {
     await page.close();
 
     console.log(
-      `🔎 LibertyCity: ${noticias.length} notícias reais encontradas.`
+      "🔎 LibertyCity: " +
+        noticias.length +
+        " notícias reais encontradas."
     );
 
     return noticias;
@@ -569,6 +622,7 @@ async function buscarNoticiasLibertyCity() {
 
 // ======================================================
 // FORTNITE — RSS
+// SEM TEMPLATE LITERALS
 // ======================================================
 
 async function buscarNoticiasFortniteRSS() {
@@ -578,10 +632,11 @@ async function buscarNoticiasFortniteRSS() {
     );
 
     console.log(
-      `🔎 Fortnite: consultando RSS ${RSS_FORTNITE}`
+      "🔎 Fortnite: consultando RSS " +
+        RSS_FORTNITE
     );
 
-    const feed =
+    var feed =
       await rssParser.parseURL(
         RSS_FORTNITE
       );
@@ -591,17 +646,17 @@ async function buscarNoticiasFortniteRSS() {
     );
 
     console.log(
-      `📰 Título do feed: ${
-        feed.title ||
-        "não informado"
-      }`
+      "📰 Título do feed: " +
+        (feed.title ||
+          "não informado")
     );
 
     console.log(
-      `📊 Notícias recebidas: ${feed.items.length}`
+      "📊 Notícias recebidas: " +
+        feed.items.length
     );
 
-    const noticias = [];
+    var noticias = [];
 
     for (
       const item of feed.items.slice(
@@ -609,17 +664,17 @@ async function buscarNoticiasFortniteRSS() {
         10
       )
     ) {
-      const titulo =
+      var titulo =
         limparTexto(
           item.title
         );
 
-      const link =
+      var link =
         normalizarUrl(
           item.link
         );
 
-      const descricao =
+      var descricao =
         limparTexto(
           item.contentSnippet ||
             item.content ||
@@ -627,15 +682,16 @@ async function buscarNoticiasFortniteRSS() {
             ""
         );
 
-      const data =
+      var data =
         item.isoDate ||
         item.pubDate ||
         "";
 
-      let imagem = "";
+      var imagem = "";
 
       if (
-        item.enclosure?.url
+        item.enclosure &&
+        item.enclosure.url
       ) {
         imagem =
           item.enclosure.url;
@@ -643,76 +699,77 @@ async function buscarNoticiasFortniteRSS() {
 
       if (
         !imagem &&
-        item["media:content"]?.$?.url
+        item["media:content"] &&
+        item["media:content"].$ &&
+        item["media:content"].$.url
       ) {
         imagem =
-          item[
-            "media:content"
-          ].$?.url;
+          item["media:content"].$.url;
       }
 
       if (
         !imagem &&
-        item["media:thumbnail"]?.$?.url
+        item["media:thumbnail"] &&
+        item["media:thumbnail"].$ &&
+        item["media:thumbnail"].$.url
       ) {
         imagem =
-          item[
-            "media:thumbnail"
-          ].$?.url;
+          item["media:thumbnail"].$.url;
       }
 
-      const rumorLeak =
+      var rumorLeak =
         detectarRumorLeak(
           titulo,
           descricao
         );
 
       noticias.push({
-        titulo,
-        link,
-        descricao,
-        data,
-        imagem,
-        rumorLeak,
+        titulo: titulo,
+        link: link,
+        descricao: descricao,
+        data: data,
+        imagem: imagem,
+        rumorLeak: rumorLeak,
       });
 
       console.log("");
       console.log(
         "━━━━━━━━━━━━━━━━━━━━━━━━"
       );
+
       console.log(
-        `📰 Título: ${
-          titulo || "(vazio)"
-        }`
+        "📰 Título: " +
+          (titulo || "(vazio)")
       );
+
       console.log(
-        `🔗 Link: ${
-          link || "(vazio)"
-        }`
+        "🔗 Link: " +
+          (link || "(vazio)")
       );
+
       console.log(
-        `📅 Data: ${
-          data || "(vazia)"
-        }`
+        "📅 Data: " +
+          (data || "(vazia)")
       );
+
       console.log(
-        `📝 Descrição: ${
-          descricao || "(vazia)"
-        }`
+        "📝 Descrição: " +
+          (descricao || "(vazia)")
       );
+
       console.log(
-        `🖼️ Imagem: ${
-          imagem ||
-          "(não fornecida)"
-        }`
+        "🖼️ Imagem: " +
+          (imagem ||
+            "(não fornecida)")
       );
+
       console.log(
-        `🚨 Rumor/Leak: ${
-          rumorLeak
+        "🚨 Rumor/Leak: " +
+          (rumorLeak
             ? "SIM"
-            : "NÃO"
-        }`
+            : "NÃO")
       );
+
       console.log(
         "━━━━━━━━━━━━━━━━━━━━━━━━"
       );
@@ -734,14 +791,15 @@ async function buscarNoticiasFortniteRSS() {
 
 // ======================================================
 // PUBLICAR FORTNITE
+// SEM TEMPLATE LITERALS
 // ======================================================
 
 async function publicarFortnite(
   noticia,
-  forcar = false
+  forcar
 ) {
   try {
-    const canal =
+    var canal =
       await client.channels.fetch(
         ID_FORTNITE
       );
@@ -757,7 +815,7 @@ async function publicarFortnite(
     }
 
     if (!forcar) {
-      const duplicada =
+      var duplicada =
         await noticiaJaPublicada(
           canal,
           noticia.link,
@@ -766,7 +824,8 @@ async function publicarFortnite(
 
       if (duplicada) {
         console.log(
-          `⏭️ Fortnite: já publicada: ${noticia.titulo}`
+          "⏭️ Fortnite: já publicada: " +
+            noticia.titulo
         );
 
         return false;
@@ -774,15 +833,17 @@ async function publicarFortnite(
     }
 
     console.log(
-      `🎮 Fortnite: traduzindo "${noticia.titulo}"`
+      "🎮 Fortnite: traduzindo \"" +
+        noticia.titulo +
+        "\""
     );
 
-    const tituloPT =
+    var tituloPT =
       await traduzirGoogle(
         noticia.titulo
       );
 
-    let descricaoPT =
+    var descricaoPT =
       await traduzirGoogle(
         noticia.descricao
       );
@@ -797,22 +858,32 @@ async function publicarFortnite(
         "...";
     }
 
-    const marcador =
+    var marcador =
       noticia.rumorLeak
         ? "🚨 **RUMOR / LEAK**\n\n"
         : "";
 
-    const mensagem =
-      `@everyone 📰 **Acabou de sair notícia nova do Fortnite!**\n\n` +
-      `${marcador}` +
-      `🇧🇷 **${tituloPT}**\n\n` +
-      `${
-        descricaoPT
-          ? `📝 ${descricaoPT}\n\n`
-          : ""
-      }` +
-      `🔗 ${noticia.link}\n\n` +
-      `👇 **Clique no título acima para ler a matéria completa.**`;
+    var mensagem =
+      "@everyone 📰 **Acabou de sair notícia nova do Fortnite!**\n\n" +
+      marcador +
+      "🇧🇷 **" +
+      tituloPT +
+      "**\n\n";
+
+    if (descricaoPT) {
+      mensagem =
+        mensagem +
+        "📝 " +
+        descricaoPT +
+        "\n\n";
+    }
+
+    mensagem =
+      mensagem +
+      "🔗 " +
+      noticia.link +
+      "\n\n" +
+      "👇 **Clique no título acima para ler a matéria completa.**";
 
     await canal.send({
       content: mensagem,
@@ -822,7 +893,8 @@ async function publicarFortnite(
     });
 
     console.log(
-      `✅ Fortnite publicado em PT-BR: ${tituloPT}`
+      "✅ Fortnite publicado em PT-BR: " +
+        tituloPT
     );
 
     return true;
@@ -838,19 +910,19 @@ async function publicarFortnite(
 
 // ======================================================
 // LOJA FORTNITE
-// MANTIDA COMO ESTÁ — NÃO ALTERADA
+// MANTIDA COMO ESTÁ
 // ======================================================
 
 async function publicarLoja() {
   try {
-    const canal =
+    var canal =
       await client.channels.fetch(
         ID_LOJA
       );
 
     if (!canal) return false;
 
-    const embed =
+    var embed =
       new EmbedBuilder()
         .setTitle(
           "🛒 LOJA DO FORTNITE ATUALIZADA!"
@@ -900,13 +972,13 @@ async function publicarLoja() {
 // ======================================================
 
 async function processarGTA() {
-  let total = 0;
+  var total = 0;
 
   console.log(
     "━━━━━━━━ Rockstar ━━━━━━━━"
   );
 
-  const rockstar =
+  var rockstar =
     await buscarNoticiasRockstar();
 
   for (
@@ -915,7 +987,7 @@ async function processarGTA() {
       2
     )
   ) {
-    const publicou =
+    var publicou =
       await publicarGTA(
         noticia
       );
@@ -926,16 +998,18 @@ async function processarGTA() {
   }
 
   console.log(
-    `📊 Rockstar: ${total} notícia(s) nova(s) publicada(s).`
+    "📊 Rockstar: " +
+      total +
+      " notícia(s) nova(s) publicada(s)."
   );
 
-  let totalLiberty = 0;
+  var totalLiberty = 0;
 
   console.log(
     "━━━━━━━━ LibertyCity ━━━━━━━━"
   );
 
-  const liberty =
+  var liberty =
     await buscarNoticiasLibertyCity();
 
   for (
@@ -944,18 +1018,20 @@ async function processarGTA() {
       2
     )
   ) {
-    const publicou =
+    var publicouLiberty =
       await publicarGTA(
         noticia
       );
 
-    if (publicou) {
+    if (publicouLiberty) {
       totalLiberty++;
     }
   }
 
   console.log(
-    `📊 GTA LibertyCity: ${totalLiberty} notícia(s) nova(s) publicada(s).`
+    "📊 GTA LibertyCity: " +
+      totalLiberty +
+      " notícia(s) nova(s) publicada(s)."
   );
 
   return (
@@ -969,9 +1045,9 @@ async function processarGTA() {
 // ======================================================
 
 async function processarFortnite() {
-  let total = 0;
+  var total = 0;
 
-  const noticias =
+  var noticias =
     await buscarNoticiasFortniteRSS();
 
   if (!noticias.length) {
@@ -988,7 +1064,7 @@ async function processarFortnite() {
       2
     )
   ) {
-    const publicou =
+    var publicou =
       await publicarFortnite(
         noticia
       );
@@ -999,7 +1075,9 @@ async function processarFortnite() {
   }
 
   console.log(
-    `📊 Fortnite: ${total} notícia(s) nova(s) publicada(s).`
+    "📊 Fortnite: " +
+      total +
+      " notícia(s) nova(s) publicada(s)."
   );
 
   return total;
@@ -1009,7 +1087,7 @@ async function processarFortnite() {
 // CICLO AUTOMÁTICO
 // ======================================================
 
-let cicloRodando = false;
+var cicloRodando = false;
 
 async function cicloNoticias() {
   if (cicloRodando) {
@@ -1028,16 +1106,17 @@ async function cicloNoticias() {
     );
 
     console.log(
-      `🇧🇷 ${new Date().toLocaleString(
-        "pt-BR"
-      )}`
+      "🇧🇷 " +
+        new Date().toLocaleString(
+          "pt-BR"
+        )
     );
 
     // ==================================================
     // GTA — NÃO ALTERADO
     // ==================================================
 
-    const totalGTA =
+    var totalGTA =
       await processarGTA();
 
     // ==================================================
@@ -1048,15 +1127,19 @@ async function cicloNoticias() {
       "━━━━━━━━ Fortnite ━━━━━━━━"
     );
 
-    const totalFortnite =
+    var totalFortnite =
       await processarFortnite();
 
     console.log(
-      `📊 GTA TOTAL: ${totalGTA} notícia(s) nova(s) publicada(s).`
+      "📊 GTA TOTAL: " +
+        totalGTA +
+        " notícia(s) nova(s) publicada(s)."
     );
 
     console.log(
-      `📊 FORTNITE TOTAL: ${totalFortnite} notícia(s) nova(s) publicada(s).`
+      "📊 FORTNITE TOTAL: " +
+        totalFortnite +
+        " notícia(s) nova(s) publicada(s)."
     );
 
     console.log(
@@ -1076,7 +1159,7 @@ async function cicloNoticias() {
 // TESTES
 // ======================================================
 
-let testeRodando = false;
+var testeRodando = false;
 
 async function executarTesteFortnite(
   canalResposta
@@ -1097,7 +1180,7 @@ async function executarTesteFortnite(
       "Vou consultar a fonte e traduzir a primeira notícia sem publicar no canal de notícias."
     );
 
-    const noticias =
+    var noticias =
       await buscarNoticiasFortniteRSS();
 
     if (!noticias.length) {
@@ -1108,30 +1191,33 @@ async function executarTesteFortnite(
       return;
     }
 
-    const primeira =
+    var primeira =
       noticias[0];
 
     console.log("");
     console.log(
       "========================================"
     );
+
     console.log(
       "🧪 TESTE FORTNITE + TRADUÇÃO"
     );
+
     console.log(
       "========================================"
     );
 
     console.log(
-      `📰 Original: ${primeira.titulo}`
+      "📰 Original: " +
+        primeira.titulo
     );
 
-    const tituloPT =
+    var tituloPT =
       await traduzirGoogle(
         primeira.titulo
       );
 
-    let descricaoPT =
+    var descricaoPT =
       await traduzirGoogle(
         primeira.descricao
       );
@@ -1147,34 +1233,48 @@ async function executarTesteFortnite(
     }
 
     console.log(
-      `🇧🇷 Traduzido: ${tituloPT}`
+      "🇧🇷 Traduzido: " +
+        tituloPT
     );
 
     console.log(
-      `🔗 ${primeira.link}`
+      "🔗 " +
+        primeira.link
     );
 
     console.log(
       "========================================"
     );
 
-    const marcador =
+    var marcador =
       primeira.rumorLeak
         ? "🚨 **RUMOR / LEAK**\n\n"
         : "";
 
+    var mensagemTeste =
+      "✅ **RSS + tradução funcionando!**\n\n" +
+      marcador +
+      "🇧🇷 **" +
+      tituloPT +
+      "**\n\n";
+
+    if (descricaoPT) {
+      mensagemTeste =
+        mensagemTeste +
+        "📝 " +
+        descricaoPT +
+        "\n\n";
+    }
+
+    mensagemTeste =
+      mensagemTeste +
+      "🔗 " +
+      primeira.link +
+      "\n\n" +
+      "📌 **Esta foi apenas uma prévia de teste. A notícia não foi publicada no canal Fortnite.**";
+
     await canalResposta.send({
-      content:
-        "✅ **RSS + tradução funcionando!**\n\n" +
-        `${marcador}` +
-        `🇧🇷 **${tituloPT}**\n\n` +
-        `${
-          descricaoPT
-            ? `📝 ${descricaoPT}\n\n`
-            : ""
-        }` +
-        `🔗 ${primeira.link}\n\n` +
-        "📌 **Esta foi apenas uma prévia de teste. A notícia não foi publicada no canal Fortnite.**",
+      content: mensagemTeste,
     });
   } catch (erro) {
     console.log(
@@ -1184,7 +1284,8 @@ async function executarTesteFortnite(
 
     await canalResposta.send(
       "❌ **O teste do RSS/tradução falhou.**\n\n" +
-      `Erro: \`${erro.message}\``
+      "Erro: " +
+      erro.message
     );
   } finally {
     testeRodando = false;
@@ -1197,11 +1298,11 @@ async function executarTesteFortnite(
 
 client.on(
   "messageCreate",
-  async (message) => {
+  async function (message) {
     if (message.author.bot)
       return;
 
-    const texto =
+    var texto =
       message.content
         .trim()
         .toLowerCase();
@@ -1232,7 +1333,7 @@ client.on(
       testeRodando = true;
 
       try {
-        const noticias =
+        var noticias =
           await buscarNoticiasRockstar();
 
         if (!noticias.length) {
@@ -1269,10 +1370,12 @@ client.on(
       testeRodando = true;
 
       try {
-        const noticias =
+        var noticiasLiberty =
           await buscarNoticiasLibertyCity();
 
-        if (!noticias.length) {
+        if (
+          !noticiasLiberty.length
+        ) {
           await message.channel.send(
             "❌ Nenhuma notícia LibertyCity encontrada."
           );
@@ -1281,7 +1384,7 @@ client.on(
         }
 
         await publicarGTA(
-          noticias[0],
+          noticiasLiberty[0],
           true
         );
       } finally {
@@ -1319,13 +1422,13 @@ client.on(
       texto ===
       "!piada"
     ) {
-      const piadas = [
+      var piadas = [
         "🎮 Por que o jogador foi para o médico? Porque estava com FPS baixo.",
         "😂 O player disse que ia jogar só uma partida... 6 horas depois...",
         "🤣 Meu PC não trava. Ele apenas tira férias no meio da partida.",
       ];
 
-      const piada =
+      var piada =
         piadas[
           Math.floor(
             Math.random() *
@@ -1365,37 +1468,45 @@ client.on(
 
 client.once(
   "ready",
-  () => {
+  function () {
     console.log(
-      `🤖 ${client.user.tag} está ONLINE!`
+      "🤖 " +
+        client.user.tag +
+        " está ONLINE!"
     );
 
     console.log(
-      `🛒 Canal Loja: ${ID_LOJA}`
+      "🛒 Canal Loja: " +
+        ID_LOJA
     );
 
     console.log(
-      `🎮 Canal Fortnite: ${ID_FORTNITE}`
+      "🎮 Canal Fortnite: " +
+        ID_FORTNITE
     );
 
     console.log(
-      `🚔 Canal GTA: ${ID_GTA}`
+      "🚔 Canal GTA: " +
+        ID_GTA
     );
 
     console.log(
       "📰 Sistema automático de notícias iniciado."
     );
 
-    setTimeout(() => {
-      cicloNoticias();
-    }, 10000);
+    setTimeout(
+      function () {
+        cicloNoticias();
+      },
+      10000
+    );
 
     // ==================================================
     // CICLO A CADA 10 MINUTOS
     // ==================================================
 
     setInterval(
-      () => {
+      function () {
         cicloNoticias();
       },
       10 * 60 * 1000
@@ -1406,20 +1517,20 @@ client.once(
     // MANTIDA COMO ESTAVA
     // ==================================================
 
-    let ultimaLoja = "";
+    var ultimaLoja = "";
 
     setInterval(
-      async () => {
-        const agora =
+      async function () {
+        var agora =
           new Date();
 
-        const hora =
+        var hora =
           agora.getHours();
 
-        const minuto =
+        var minuto =
           agora.getMinutes();
 
-        const hoje =
+        var hoje =
           agora
             .toISOString()
             .slice(
