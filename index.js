@@ -14,12 +14,12 @@ const client = new Client({
 client.once('ready', () => {
   console.log(`✅ Bot conectado como ${client.user.tag}`);
 
-  // Pega o canal certo
+  // Canal onde o Murilito vai postar
   const canal = client.channels.cache.get("1520508956978712576");
 
-  // Mensagem de teste
+  // Mensagem de teste ao iniciar
   if (canal) {
-    canal.send("✅ Teste: Murilito está funcionando e pronto pra postar notícias!");
+    canal.send("@everyone ✅ Teste: Murilito está funcionando e pronto pra postar notícias!");
   } else {
     console.error("❌ Canal não encontrado. Verifique o ID.");
   }
@@ -29,7 +29,7 @@ client.once('ready', () => {
     try {
       const feed = await parser.parseURL('https://pt.libertycity.net/news/rss');
       const noticia = feed.items[0];
-      canal.send(`📰 **Nova notícia de GTA (LibertyCity):**\n${noticia.title}\n${noticia.link}`);
+      canal.send(`@everyone 📰 **Nova notícia de GTA (LibertyCity):**\n${noticia.title}\n${noticia.link}`);
       console.log(`LibertyCity postada: ${noticia.title}`);
     } catch (err) {
       console.error('Erro ao buscar LibertyCity:', err);
@@ -41,7 +41,7 @@ client.once('ready', () => {
     try {
       const feed = await parser.parseURL('https://www.rockstargames.com/br/newswire/rss');
       const noticia = feed.items[0];
-      canal.send(`📰 **Nova notícia de GTA (Rockstar Newswire):**\n${noticia.title}\n${noticia.link}`);
+      canal.send(`@everyone 📰 **Nova notícia de GTA (Rockstar Newswire):**\n${noticia.title}\n${noticia.link}`);
       console.log(`Rockstar postada: ${noticia.title}`);
     } catch (err) {
       console.error('Erro ao buscar Rockstar:', err);
