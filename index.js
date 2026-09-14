@@ -14,9 +14,15 @@ const client = new Client({
 client.once('ready', () => {
   console.log(`✅ Bot conectado como ${client.user.tag}`);
 
-  // Mensagem de teste para confirmar que o bot está postando no canal certo
+  // Pega o canal depois que o bot está pronto
   const canal = client.channels.cache.get("732358123427332177");
-  canal.send("✅ Teste: Murilito está funcionando e pronto pra postar notícias!");
+
+  // Mensagem de teste
+  if (canal) {
+    canal.send("✅ Teste: Murilito está funcionando e pronto pra postar notícias!");
+  } else {
+    console.error("❌ Canal não encontrado. Verifique o ID.");
+  }
 
   // Função para postar notícias do LibertyCity
   async function postarLibertyCity() {
