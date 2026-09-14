@@ -1,17 +1,18 @@
 require("dotenv").config();
 
-const axios = require("axios");
-const cheerio = require("cheerio");
-const Parser = require("rss-parser");
 const {
   Client,
   GatewayIntentBits,
   EmbedBuilder,
 } = require("discord.js");
 
-// ======================================================
+const axios = require("axios");
+const cheerio = require("cheerio");
+const Parser = require("rss-parser");
+
+// ============================================================
 // CONFIGURAÇÕES
-// ======================================================
+// ============================================================
 
 const TOKEN = process.env.TOKEN;
 
@@ -20,29 +21,28 @@ if (!TOKEN) {
   process.exit(1);
 }
 
+// Canais
 const ID_LOJA = "1517333302032470191";
 const ID_FORTNITE = "1517339263216390164";
 const ID_GTA = "1520508956978712576";
 
-const INTERVALO_NOTICIAS = 10 * 60 * 1000;
-const INTERVALO_VERIFICACAO_LOJA = 30 * 1000;
-
-const MAX_IDADE_NOTICIA_DIAS = 7;
-
+// Loja oficial
 const LOJA_FORTNITE =
   "https://www.fortnite.com/item-shop?lang=pt-BR";
 
-const parser = new Parser({
-  timeout: 15000,
-  headers: {
-    "User-Agent":
-      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36",
-  },
-});
+// Intervalos
+const INTERVALO_NOTICIAS = 10 * 60 * 1000;
+const INTERVALO_VERIFICACAO_LOJA = 30 * 1000;
 
-// ======================================================
-// DISCORD
-// ======================================================
+// Notícias com no máximo 7 dias
+const MAX_IDADE_NOTICIA_DIAS = 7;
+
+// Quantidade máxima por ciclo
+const MAX_NOTICIAS_POR_FONTE = 3;
+
+// ============================================================
+// CLIENTE DISCORD
+// ============================================================
 
 const client = new Client({
   intents: [
@@ -52,40 +52,142 @@ const client = new Client({
   ],
 });
 
-// ======================================================
-// FRASES ENGRAÇADAS
-// ======================================================
+const rssParser = new Parser({
+  timeout: 20000,
+  headers: {
+    "User-Agent":
+      "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36",
+  },
+});
 
-const FRASES_FORTNITE = [
-  "🎮 A ilha está pegando fogo. E o Murilito NEWS também.",
-  "🚨 Mais uma novidade direto da ilha. Corre antes que a skin suma.",
-  "🔥 A Epic mexeu de novo. Já pode preparar os V-Bucks.",
-  "👀 Tem novidade no Fortnite. E você soube primeiro aqui.",
-  "🎯 Informação quentinha direto da ilha.",
-  "🛒 Se tiver V-Bucks, é melhor nem olhar.",
-  "⚡ A ilha não para e o Murilito NEWS também não.",
-];
+// ============================================================
+// CONTROLE DA LOJA
+// ============================================================
 
-const FRASES_GTA = [
-  "🚔 A polícia de Los Santos já está sabendo. E você?",
+let ultimoDiaLoja = null;
+let executandoNoticias = false;
+let executandoLoja = false;
+
+// ============================================================
+// FRASES DO BOT
+// ============================================================
+
+const FRASES = [
+  "🚨 Atenção, tropa! Tem novidade na área!",
+  "🔥 Murilito NEWS trazendo o furo antes do vizinho!",
+  "👀 Já viu isso? Então corre porque pode mudar tudo!",
+  "🚔 A polícia de Los Santos já está sabendo.",
+  "💥 Essa notícia chegou mais rápido que foguete!",
+  "🎮 Mais uma novidade para vocês ficarem por dentro!",
+  "📰 Plantão Murilito NEWS ativado!",
   "🔥 Los Santos não para e o Murilito NEWS também não.",
-  "🚨 Mais uma ocorrência registrada diretamente de Los Santos.",
-  "👀 A Rockstar aprontou de novo.",
-  "💰 Prepare o bolso, porque Los Santos nunca dá notícia de graça.",
-  "🚔 Atenção, cidadão de Los Santos: temos novidades.",
-  "🔥 GTA NEWS chegando quente diretamente para vocês.",
+  "👀 Fica ligado porque essa pode dar o que falar!",
+  "📢 Informação quentinha saindo do forno!",
 ];
 
-function fraseAleatoria(lista) {
-  return lista[Math.floor(Math.random() * lista.length)];
+// ============================================================
+// FUNÇÕES GERAIS
+// ============================================================
+
+function esperar(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// ======================================================
-// HTTP COM RETRY
-// ======================================================
+function limparTexto(texto) {
+  if (!texto) return "";
 
-async function getComRetry(url, opcoes = {}, tentativas = 3) {
-  let ultimoErro;
+  return String(texto)
+    .replace(/\s+/g, " ")
+    .replace(/\n+/g, " ")
+    .trim();
+}
+
+function limitarTexto(texto, limite = 420) {
+  texto = limparTexto(texto);
+
+  if (!texto) return "";
+
+  if (texto.length <= limite) {
+    return texto;
+  }
+
+  return texto.substring(0, limite - 3).trim() + "...";
+}
+
+function fraseAleatoria() {
+  return FRASES[Math.floor(Math.random() * FRASES.length)];
+}
+
+function obterDiaBrasil() {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
+function obterHoraBrasil() {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(new Date());
+}
+
+function noticiaRecente(data) {
+  if (!data) return true;
+
+  const dataNoticia = new Date(data);
+
+  if (Number.isNaN(dataNoticia.getTime())) {
+    return true;
+  }
+
+  const limite =
+    Date.now() -
+    MAX_IDADE_NOTICIA_DIAS * 24 * 60 * 60 * 1000;
+
+  return dataNoticia.getTime() >= limite;
+}
+
+function normalizarUrl(url) {
+  if (!url) return "";
+
+  try {
+    const u = new URL(url);
+
+    u.hash = "";
+
+    // Remove parâmetros de rastreamento
+    [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_content",
+      "utm_term",
+      "oc",
+      "hl",
+      "gl",
+      "ceid",
+    ].forEach((param) => {
+      u.searchParams.delete(param);
+    });
+
+    return u.toString().replace(/\/$/, "");
+  } catch {
+    return String(url).trim();
+  }
+}
+
+// ============================================================
+// HTTP ROBUSTO
+// ============================================================
+
+async function fazerGet(url, tentativas = 3, opcoes = {}) {
+  let ultimoErro = null;
 
   for (let tentativa = 1; tentativa <= tentativas; tentativa++) {
     try {
@@ -94,21 +196,16 @@ async function getComRetry(url, opcoes = {}, tentativas = 3) {
       );
 
       const resposta = await axios.get(url, {
-        timeout: 20000,
+        timeout: 25000,
         maxRedirects: 5,
         validateStatus: (status) => status >= 200 && status < 400,
-
         headers: {
           "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36",
           Accept:
             "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language":
-            "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-          Referer: "https://www.google.com/",
           ...opcoes.headers,
         },
-
         ...opcoes,
       });
 
@@ -118,477 +215,392 @@ async function getComRetry(url, opcoes = {}, tentativas = 3) {
     } catch (erro) {
       ultimoErro = erro;
 
-      console.log(`⚠️ Falha HTTP: ${url}`);
+      const status = erro.response?.status;
 
-      if (erro.response) {
-        console.log(`   ${erro.response.status}`);
-      } else {
-        console.log(`   ${erro.message}`);
+      console.log(
+        `⚠️ Falha HTTP: ${url}`
+      );
+
+      if (status) {
+        console.log(`   Status: ${status}`);
       }
 
       if (tentativa < tentativas) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, 1500 * tentativa)
-        );
+        await esperar(1500 * tentativa);
       }
     }
   }
+
+  console.log(`❌ Falha definitiva: ${url}`);
 
   throw ultimoErro;
 }
 
-// ======================================================
-// LIMPEZA DE TEXTO
-// ======================================================
+// ============================================================
+// RESUMO DA MATÉRIA
+// ============================================================
 
-function normalizarTexto(texto) {
-  if (!texto) return "";
-
-  return String(texto)
-    .replace(/<[^>]*>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function limitarTexto(texto, limite = 420) {
-  texto = normalizarTexto(texto);
-
-  if (!texto) return "";
-
-  if (texto.length <= limite) {
-    return texto;
-  }
-
-  let cortado = texto.substring(0, limite);
-
-  const ultimoEspaco = cortado.lastIndexOf(" ");
-
-  if (ultimoEspaco > 250) {
-    cortado = cortado.substring(0, ultimoEspaco);
-  }
-
-  return `${cortado}...`;
-}
-
-function resumoValido(texto, titulo = "") {
-  texto = normalizarTexto(texto);
-  titulo = normalizarTexto(titulo);
-
-  if (!texto) return false;
-
-  if (texto.length < 50) return false;
-
-  const textoLower = texto.toLowerCase();
-
-  const genericos = [
-    "leia mais",
-    "read more",
-    "clique aqui",
-    "confira a notícia",
-    "confira a noticia",
-    "saiba mais",
-    "veja mais",
-    "acesse o site",
-  ];
-
-  if (
-    genericos.some((palavra) =>
-      textoLower === palavra ||
-      textoLower.startsWith(`${palavra}.`)
-    )
-  ) {
-    return false;
-  }
-
-  if (
-    titulo &&
-    textoLower === titulo.toLowerCase()
-  ) {
-    return false;
-  }
-
-  return true;
-}
-
-// ======================================================
-// BUSCA RESUMO DIRETAMENTE DA MATÉRIA
-// ======================================================
-
-async function buscarResumoPagina(url, fonte, titulo = "") {
-  if (!url) return "";
-
-  if (
-    url.includes("news.google.com") ||
-    url.includes("google.com/search")
-  ) {
-    return "";
-  }
-
+async function buscarResumoPagina(url, fonte, titulo) {
   try {
-    console.log(`📝 ${fonte}: buscando resumo da matéria...`);
-
-    const resposta = await getComRetry(
-      url,
-      {
-        responseType: "text",
-      },
-      2
-    );
-
-    const html = resposta.data;
-    const $ = cheerio.load(html);
-
-    // -----------------------------------------------
-    // 1. Open Graph
-    // -----------------------------------------------
-
-    const ogDescription = normalizarTexto(
-      $('meta[property="og:description"]').attr("content")
-    );
-
-    if (resumoValido(ogDescription, titulo)) {
-      console.log(`✅ ${fonte}: resumo encontrado via og:description`);
-
-      return limitarTexto(ogDescription);
+    if (!url || url.includes("news.google.com")) {
+      return fraseAleatoria();
     }
 
-    // -----------------------------------------------
-    // 2. Meta description
-    // -----------------------------------------------
-
-    const metaDescription = normalizarTexto(
-      $('meta[name="description"]').attr("content")
-    );
-
-    if (resumoValido(metaDescription, titulo)) {
-      console.log(`✅ ${fonte}: resumo encontrado via meta description`);
-
-      return limitarTexto(metaDescription);
-    }
-
-    // -----------------------------------------------
-    // 3. Twitter description
-    // -----------------------------------------------
-
-    const twitterDescription = normalizarTexto(
-      $('meta[name="twitter:description"]').attr("content")
-    );
-
-    if (resumoValido(twitterDescription, titulo)) {
-      console.log(
-        `✅ ${fonte}: resumo encontrado via Twitter description`
-      );
-
-      return limitarTexto(twitterDescription);
-    }
-
-    // -----------------------------------------------
-    // 4. Seletores específicos
-    // -----------------------------------------------
-
-    let seletores = [];
-
-    if (fonte === "LibertyCity") {
-      seletores = [
-        "article p",
-        ".article-content p",
-        ".news-content p",
-        ".news-text p",
-        ".content-news p",
-        ".post-content p",
-        "main article p",
-        "main p",
-      ];
-    }
-
-    if (fonte === "Fortnite") {
-      seletores = [
-        "article p",
-        ".article-content p",
-        ".news-content p",
-        ".content p",
-        "main article p",
-        "main p",
-      ];
-    }
-
-    if (fonte === "Rockstar") {
-      seletores = [
-        "article p",
-        ".article-content p",
-        ".news-content p",
-        ".wysiwyg p",
-        "main article p",
-        "main p",
-      ];
-    }
-
-    const paragrafos = [];
-
-    for (const seletor of seletores) {
-      $(seletor).each((i, el) => {
-        if (paragrafos.length >= 5) return;
-
-        const texto = normalizarTexto($(el).text());
-
-        if (
-          resumoValido(texto, titulo) &&
-          texto.length >= 60
-        ) {
-          paragrafos.push(texto);
-        }
-      });
-
-      if (paragrafos.length >= 2) {
-        break;
-      }
-    }
-
-    if (paragrafos.length > 0) {
-      let resumo = paragrafos.slice(0, 2).join(" ");
-
-      resumo = normalizarTexto(resumo);
-
-      if (resumoValido(resumo, titulo)) {
-        console.log(
-          `✅ ${fonte}: resumo encontrado nos parágrafos da matéria`
-        );
-
-        return limitarTexto(resumo);
-      }
-    }
-
-    console.log(`⚠️ ${fonte}: não consegui extrair resumo.`);
-
-    return "";
-  } catch (erro) {
-    console.log(
-      `⚠️ ${fonte}: erro ao buscar resumo: ${erro.message}`
-    );
-
-    return "";
-  }
-}
-
-// ======================================================
-// DATA DA NOTÍCIA
-// ======================================================
-
-function dataValida(data) {
-  if (!data) return true;
-
-  const dataNoticia = new Date(data);
-
-  if (isNaN(dataNoticia.getTime())) {
-    return true;
-  }
-
-  const agora = Date.now();
-
-  const idade =
-    (agora - dataNoticia.getTime()) /
-    (1000 * 60 * 60 * 24);
-
-  return idade <= MAX_IDADE_NOTICIA_DIAS;
-}
-
-// ======================================================
-// GOOGLE NEWS → LINK ORIGINAL
-// ======================================================
-
-async function converterGoogleNewsParaOriginal(urlGoogle) {
-  if (!urlGoogle) return "";
-
-  if (!urlGoogle.includes("news.google.com")) {
-    return urlGoogle;
-  }
-
-  try {
-    const resposta = await getComRetry(
-      urlGoogle,
-      {
-        responseType: "text",
-      },
-      2
-    );
+    const resposta = await fazerGet(url, 2);
 
     const $ = cheerio.load(resposta.data);
 
-    const links = [];
+    let resumo = "";
 
-    $("a[href]").each((i, el) => {
-      const href = $(el).attr("href");
+    // Meta tags
+    resumo =
+      $('meta[property="og:description"]').attr("content") ||
+      $('meta[name="description"]').attr("content") ||
+      $('meta[name="twitter:description"]').attr("content") ||
+      "";
 
-      if (href) {
-        links.push(href);
+    // Seletores específicos
+    if (!resumo && fonte === "LibertyCity") {
+      const seletores = [
+        "article p",
+        ".news-text p",
+        ".news-content p",
+        ".article-content p",
+        ".entry-content p",
+        ".content p",
+        "main p",
+      ];
+
+      for (const seletor of seletores) {
+        const textos = [];
+
+        $(seletor).each((_, el) => {
+          const texto = limparTexto($(el).text());
+
+          if (
+            texto.length > 50 &&
+            !texto.includes("Leia mais") &&
+            !texto.includes("Comentários")
+          ) {
+            textos.push(texto);
+          }
+        });
+
+        if (textos.length > 0) {
+          resumo = textos.slice(0, 2).join(" ");
+          break;
+        }
       }
-    });
-
-    const candidatos = links.filter((link) => {
-      return (
-        link.includes("fortnite.gg/news") ||
-        link.includes("fortnite.com/news") ||
-        link.includes("rockstargames.com/newswire")
-      );
-    });
-
-    if (candidatos.length > 0) {
-      const original = candidatos[0];
-
-      console.log(
-        `🔗 Google News convertido para: ${original}`
-      );
-
-      return original;
     }
 
-    return "";
+    if (!resumo && fonte === "Rockstar") {
+      const seletores = [
+        "article p",
+        "main p",
+        "[class*='article'] p",
+        "[class*='Article'] p",
+        "[class*='content'] p",
+      ];
+
+      for (const seletor of seletores) {
+        const textos = [];
+
+        $(seletor).each((_, el) => {
+          const texto = limparTexto($(el).text());
+
+          if (texto.length > 50) {
+            textos.push(texto);
+          }
+        });
+
+        if (textos.length > 0) {
+          resumo = textos.slice(0, 2).join(" ");
+          break;
+        }
+      }
+    }
+
+    if (!resumo && fonte === "Fortnite") {
+      const seletores = [
+        "article p",
+        "main p",
+        "[class*='article'] p",
+        "[class*='Article'] p",
+        "[class*='news'] p",
+      ];
+
+      for (const seletor of seletores) {
+        const textos = [];
+
+        $(seletor).each((_, el) => {
+          const texto = limparTexto($(el).text());
+
+          if (texto.length > 50) {
+            textos.push(texto);
+          }
+        });
+
+        if (textos.length > 0) {
+          resumo = textos.slice(0, 2).join(" ");
+          break;
+        }
+      }
+    }
+
+    resumo = limitarTexto(resumo);
+
+    if (!resumo || resumo.length < 30) {
+      return `${titulo}. Confira a matéria completa pelo link acima.`;
+    }
+
+    return resumo;
   } catch (erro) {
     console.log(
-      `⚠️ Não consegui converter Google News: ${erro.message}`
+      `⚠️ Não foi possível buscar resumo de ${fonte}:`,
+      erro.message
     );
 
-    return "";
+    return `${titulo}. Confira a matéria completa pelo link acima.`;
   }
 }
 
-// ======================================================
-// RSS
-// ======================================================
+// ============================================================
+// DUPLICIDADE
+// ============================================================
 
-async function buscarRSS(url, fonte) {
+async function noticiaJaPublicada(canal, url, titulo) {
   try {
-    const feed = await parser.parseURL(url);
+    const mensagens = await canal.messages.fetch({
+      limit: 100,
+    });
 
-    if (!feed.items || feed.items.length === 0) {
-      console.log(`⚠️ ${fonte}: RSS sem itens.`);
-      return [];
-    }
+    const urlNormalizada = normalizarUrl(url);
+    const tituloNormalizado = limparTexto(titulo).toLowerCase();
 
-    const noticias = [];
+    for (const mensagem of mensagens.values()) {
+      for (const embed of mensagem.embeds) {
+        if (embed.url) {
+          const embedUrl = normalizarUrl(embed.url);
 
-    for (const item of feed.items) {
-      let link = item.link || "";
+          if (
+            embedUrl &&
+            urlNormalizada &&
+            embedUrl === urlNormalizada
+          ) {
+            return true;
+          }
+        }
 
-      if (link.includes("news.google.com")) {
-        link = await converterGoogleNewsParaOriginal(link);
+        if (
+          embed.title &&
+          limparTexto(embed.title)
+            .toLowerCase()
+            .includes(tituloNormalizado)
+        ) {
+          return true;
+        }
       }
-
-      if (!link) continue;
-
-      let titulo = normalizarTexto(
-        item.title ||
-          item.creator ||
-          item.name
-      );
-
-      if (!titulo) continue;
-
-      let descricao = normalizarTexto(
-        item.contentSnippet ||
-          item.content ||
-          item.summary ||
-          item.description
-      );
-
-      let data =
-        item.isoDate ||
-        item.pubDate ||
-        item.date ||
-        null;
-
-      noticias.push({
-        titulo,
-        url: link,
-        descricao,
-        data,
-        imagem: null,
-      });
     }
 
-    return noticias;
+    return false;
   } catch (erro) {
     console.log(
-      `⚠️ ${fonte}: erro RSS: ${erro.message}`
+      "⚠️ Erro ao verificar duplicidade:",
+      erro.message
     );
 
-    return [];
+    return false;
   }
 }
 
-// ======================================================
-// FORTNITE API
-// ======================================================
+// ============================================================
+// PUBLICAR NOTÍCIA
+// ============================================================
 
-function extrairObjetosRecursivamente(obj, resultado = []) {
+async function publicarNoticia(
+  fonte,
+  canal,
+  noticia
+) {
+  try {
+    if (!noticia?.titulo || !noticia?.url) {
+      return false;
+    }
+
+    const url = normalizarUrl(noticia.url);
+
+    if (
+      !url ||
+      url.includes("news.google.com") ||
+      url.startsWith("javascript:")
+    ) {
+      console.log(
+        `⛔ ${fonte}: URL inválida ou ainda é Google News.`
+      );
+
+      return false;
+    }
+
+    if (
+      noticia.data &&
+      !noticiaRecente(noticia.data)
+    ) {
+      console.log(
+        `⏭️ ${fonte}: notícia antiga ignorada: ${noticia.titulo}`
+      );
+
+      return false;
+    }
+
+    if (
+      await noticiaJaPublicada(
+        canal,
+        url,
+        noticia.titulo
+      )
+    ) {
+      console.log(
+        `⏭️ ${fonte}: já publicada: ${noticia.titulo}`
+      );
+
+      return false;
+    }
+
+    console.log(
+      `📝 ${fonte}: buscando resumo...`
+    );
+
+    const resumo =
+      noticia.resumo ||
+      (await buscarResumoPagina(
+        url,
+        fonte,
+        noticia.titulo
+      ));
+
+    const embed = new EmbedBuilder()
+      .setColor(0x5865f2)
+      .setTitle(noticia.titulo)
+      .setURL(url)
+      .setDescription(
+        `📰 **Resumo:**\n${limitarTexto(resumo, 600)}\n\n` +
+        `🔗 **Clique no título acima para ler a matéria completa.**`
+      )
+      .setFooter({
+        text: `Murilito NEWS • ${fonte}`,
+      })
+      .setTimestamp();
+
+    if (noticia.imagem) {
+      try {
+        embed.setImage(noticia.imagem);
+      } catch {}
+    }
+
+    await canal.send({
+      content: `@everyone\n${fraseAleatoria()}`,
+      embeds: [embed],
+      allowedMentions: {
+        parse: ["everyone"],
+      },
+    });
+
+    console.log(`📢 ${fonte}: notícia publicada.`);
+    console.log(`   ${noticia.titulo}`);
+    console.log(`   ${url}`);
+
+    return true;
+  } catch (erro) {
+    console.log(
+      `❌ ${fonte}: erro ao publicar notícia:`,
+      erro.message
+    );
+
+    return false;
+  }
+}
+
+// ============================================================
+// FORTNITE
+// ============================================================
+
+function extrairNoticiasFortnite(obj, resultado = []) {
   if (!obj || typeof obj !== "object") {
     return resultado;
   }
 
   if (Array.isArray(obj)) {
     for (const item of obj) {
-      extrairObjetosRecursivamente(item, resultado);
+      extrairNoticiasFortnite(item, resultado);
     }
 
     return resultado;
   }
 
+  const chaves = Object.keys(obj);
+
   const titulo =
     obj.title ||
     obj.name ||
     obj.headline ||
-    obj.displayName;
-
-  const descricao =
-    obj.body ||
-    obj.description ||
-    obj.message ||
-    obj.summary ||
-    obj.content;
+    obj.newsTitle;
 
   const url =
     obj.url ||
     obj.link ||
-    obj.href;
+    obj.webUrl ||
+    obj.websiteUrl;
+
+  const descricao =
+    obj.description ||
+    obj.body ||
+    obj.summary ||
+    obj.text;
+
+  const imagem =
+    obj.image ||
+    obj.imageUrl ||
+    obj.banner ||
+    obj.bannerImage ||
+    obj.background;
+
+  const data =
+    obj.date ||
+    obj.publishedAt ||
+    obj.published ||
+    obj.createdAt ||
+    obj.timestamp;
 
   if (
     titulo &&
     typeof titulo === "string" &&
-    (
-      descricao ||
-      url
-    )
+    titulo.length >= 8 &&
+    url &&
+    typeof url === "string"
   ) {
-    resultado.push({
-      titulo: normalizarTexto(titulo),
-      descricao: normalizarTexto(descricao || ""),
-      url: url || "",
-      data:
-        obj.date ||
-        obj.publishedAt ||
-        obj.published ||
-        obj.createdAt ||
-        null,
-      imagem:
-        obj.image ||
-        obj.imageUrl ||
-        obj.thumbnail ||
-        null,
-    });
+    const urlValida =
+      url.startsWith("http://") ||
+      url.startsWith("https://");
+
+    if (urlValida) {
+      resultado.push({
+        titulo: limparTexto(titulo),
+        url,
+        resumo: limparTexto(descricao || ""),
+        imagem,
+        data,
+      });
+    }
   }
 
-  for (const chave of Object.keys(obj)) {
+  for (const chave of chaves) {
     const valor = obj[chave];
 
     if (
       valor &&
       typeof valor === "object"
     ) {
-      extrairObjetosRecursivamente(
+      extrairNoticiasFortnite(
         valor,
         resultado
       );
@@ -611,53 +623,58 @@ async function buscarFortniteAPI() {
         `🔎 Fortnite API: tentando ${url}`
       );
 
-      const resposta = await getComRetry(
+      const resposta = await fazerGet(
         url,
+        2,
         {
-          responseType: "json",
-        },
-        2
+          headers: {
+            Accept: "application/json",
+          },
+        }
       );
 
-      const candidatos =
-        extrairObjetosRecursivamente(
-          resposta.data
+      let noticias =
+        extrairNoticiasFortnite(
+          resposta.data,
+          []
         );
 
-      const unicos = [];
-      const vistos = new Set();
-
-      for (const item of candidatos) {
-        const chave =
-          `${item.titulo}|${item.url}`;
-
-        if (vistos.has(chave)) continue;
-
-        vistos.add(chave);
-
-        if (!item.titulo) continue;
-
-        if (
+      noticias = noticias.filter(
+        (item) =>
           item.url &&
-          (
-            item.url.includes("fortnite") ||
-            item.url.includes("epicgames")
+          !item.url.includes(
+            "fortnite-api.com"
           )
-        ) {
-          unicos.push(item);
+      );
+
+      // Remove duplicadas
+      const mapa = new Map();
+
+      for (const noticia of noticias) {
+        const chave =
+          normalizarUrl(noticia.url) ||
+          noticia.titulo;
+
+        if (!mapa.has(chave)) {
+          mapa.set(chave, noticia);
         }
       }
 
-      if (unicos.length > 0) {
+      noticias = [...mapa.values()];
+
+      if (noticias.length > 0) {
         console.log(
-          `✅ Fortnite API encontrou ${unicos.length} candidatos.`
+          `✅ Fortnite API encontrou ${noticias.length} candidatos.`
         );
 
-        return unicos;
+        return noticias.slice(
+          0,
+          MAX_NOTICIAS_POR_FONTE
+        );
       }
 
       console.log(
-        "⚠️ Fortnite API respondeu, mas não encontrei notícias na estrutura."
+        "⚠️ Fortnite API respondeu, mas nenhuma notícia compatível foi encontrada."
       );
     } catch (erro) {
       console.log(
@@ -669,78 +686,231 @@ async function buscarFortniteAPI() {
   return [];
 }
 
-// ======================================================
-// FORTNITE RSS FALLBACK
-// ======================================================
+// ============================================================
+// FORTNITE RSS GOOGLE
+// ============================================================
 
 async function buscarFortniteRSS() {
+  const hoje = new Date();
+
   const consultas = [
-    "site:fortnite.gg/news after:2026-09-01",
-    "site:fortnite.com/news after:2026-09-01",
+    `site:fortnite.gg/news after:${obterDataBusca(hoje)}`,
+    `site:fortnite.com/news after:${obterDataBusca(hoje)}`,
   ];
 
   for (const consulta of consultas) {
-    const url =
-      "https://news.google.com/rss/search?q=" +
-      encodeURIComponent(consulta) +
-      "&hl=pt-BR&gl=BR&ceid=BR:pt-419";
-
-    console.log(
-      `🔎 Fortnite RSS: ${consulta}`
-    );
-
-    const noticias = await buscarRSS(
-      url,
-      "Fortnite"
-    );
-
-    const filtradas = noticias.filter(
-      (noticia) =>
-        noticia.url.includes("fortnite.gg/news") ||
-        noticia.url.includes("fortnite.com/news")
-    );
-
-    if (filtradas.length > 0) {
+    try {
       console.log(
-        `✅ Fortnite RSS encontrou ${filtradas.length} notícias.`
+        `🔎 Fortnite RSS: ${consulta}`
       );
 
-      return filtradas;
+      const url =
+        "https://news.google.com/rss/search?q=" +
+        encodeURIComponent(consulta) +
+        "&hl=pt-BR&gl=BR&ceid=BR:pt-419";
+
+      const resposta =
+        await fazerGet(url, 2);
+
+      const feed =
+        await rssParser.parseString(
+          resposta.data
+        );
+
+      if (
+        feed.items &&
+        feed.items.length > 0
+      ) {
+        console.log(
+          `✅ Fortnite RSS encontrou ${feed.items.length} notícias.`
+        );
+
+        return feed.items
+          .filter((item) =>
+            noticiaRecente(
+              item.pubDate
+            )
+          )
+          .map((item) => ({
+            titulo: limparTexto(
+              item.title
+            ),
+            url: item.link,
+            resumo: limparTexto(
+              item.contentSnippet ||
+                item.content ||
+                ""
+            ),
+            data: item.pubDate,
+          }))
+          .slice(
+            0,
+            MAX_NOTICIAS_POR_FONTE
+          );
+      }
+
+      console.log(
+        "⚠️ Fortnite RSS: RSS sem itens."
+      );
+    } catch (erro) {
+      console.log(
+        `⚠️ Fortnite RSS falhou: ${erro.message}`
+      );
     }
   }
 
   return [];
 }
 
-// ======================================================
-// FORTNITE
-// ======================================================
+function obterDataBusca(data) {
+  const d = new Date(data);
+  d.setDate(
+    d.getDate() -
+      MAX_IDADE_NOTICIA_DIAS
+  );
+
+  return d.toISOString().slice(0, 10);
+}
 
 async function buscarFortnite() {
   console.log(
     "🔎 Fortnite: iniciando busca de notícias."
   );
 
-  let noticias = await buscarFortniteAPI();
+  let noticias =
+    await buscarFortniteAPI();
 
-  if (noticias.length === 0) {
-    console.log(
-      "⚠️ Fortnite API sem notícias. Usando RSS."
-    );
-
-    noticias = await buscarFortniteRSS();
+  if (noticias.length > 0) {
+    return noticias;
   }
 
-  noticias = noticias.filter((noticia) =>
-    dataValida(noticia.data)
+  console.log(
+    "⚠️ Fortnite API sem notícias. Usando RSS."
   );
+
+  noticias =
+    await buscarFortniteRSS();
 
   return noticias;
 }
 
-// ======================================================
+// ============================================================
 // LIBERTYCITY
-// ======================================================
+// ============================================================
+
+function extrairNoticiasLibertyCity(html) {
+  const $ = cheerio.load(html);
+
+  const resultado = [];
+  const urlsVistas = new Set();
+
+  $('a[href*="/news/"]').each(
+    (_, elemento) => {
+      const href =
+        $(elemento).attr("href");
+
+      if (!href) return;
+
+      let url;
+
+      try {
+        url = new URL(
+          href,
+          "https://pt.libertycity.net"
+        ).href;
+      } catch {
+        return;
+      }
+
+      // Só matérias reais
+      if (!/\/news\/.+\/\d+-.*\.html$/i.test(url)) {
+        return;
+      }
+
+      const normalizada =
+        normalizarUrl(url);
+
+      if (urlsVistas.has(normalizada)) {
+        return;
+      }
+
+      urlsVistas.add(normalizada);
+
+      let titulo =
+        $(elemento).attr("title") ||
+        limparTexto($(elemento).text());
+
+      // Evita "Leia mais"
+      if (
+        !titulo ||
+        titulo.length < 10 ||
+        /^leia mais$/i.test(titulo)
+      ) {
+        const pai =
+          $(elemento).closest(
+            "article, li, div"
+          );
+
+        const candidatos = [];
+
+        pai
+          .find("h1,h2,h3,h4,.title")
+          .each((__, el) => {
+            const texto =
+              limparTexto(
+                $(el).text()
+              );
+
+            if (
+              texto.length >= 10
+            ) {
+              candidatos.push(
+                texto
+              );
+            }
+          });
+
+        if (candidatos.length > 0) {
+          titulo =
+            candidatos.sort(
+              (a, b) =>
+                a.length - b.length
+            )[0];
+        }
+      }
+
+      if (
+        !titulo ||
+        titulo.length < 10 ||
+        /^leia mais$/i.test(titulo)
+      ) {
+        return;
+      }
+
+      // Ignora itens que claramente não são notícias
+      const tituloLower =
+        titulo.toLowerCase();
+
+      if (
+        tituloLower.includes(
+          "próxima página"
+        ) ||
+        tituloLower.includes(
+          "voltar"
+        )
+      ) {
+        return;
+      }
+
+      resultado.push({
+        titulo,
+        url,
+      });
+    }
+  );
+
+  return resultado;
+}
 
 async function buscarLibertyCity() {
   const paginas = [
@@ -748,525 +918,409 @@ async function buscarLibertyCity() {
     "https://pt.libertycity.net/news/page/2/",
   ];
 
-  const noticias = [];
+  const todas = [];
 
   for (const pagina of paginas) {
     try {
-      const resposta = await getComRetry(
-        pagina,
-        {
-          responseType: "text",
-        },
-        3
-      );
-
-      const $ = cheerio.load(
-        resposta.data
-      );
-
-      const linksEncontrados = new Set();
-
-      $("a[href]").each((i, el) => {
-        let href = $(el).attr("href");
-
-        if (!href) return;
-
-        if (href.startsWith("/")) {
-          href =
-            "https://pt.libertycity.net" +
-            href;
-        }
-
-        if (!href.includes("pt.libertycity.net/news/")) {
-          return;
-        }
-
-        // Ignorar paginação
-        if (
-          /\/news\/page\/\d+\/?$/i.test(href)
-        ) {
-          return;
-        }
-
-        // Ignorar categorias
-        if (
-          /\/news\/(gta-6|gta-5|gta-online|tag|search|category)\//i.test(
-            href
-          )
-        ) {
-          return;
-        }
-
-        // Só aceitar matérias .html
-        if (!href.endsWith(".html")) {
-          return;
-        }
-
-        linksEncontrados.add(href);
-      });
-
-      console.log(
-        `🔎 LibertyCity: ${linksEncontrados.size} possíveis notícias.`
-      );
-
-      for (const url of linksEncontrados) {
-        let titulo = "";
-
-        const link = $(
-          `a[href="${url}"]`
-        ).first();
-
-        if (link.length) {
-          titulo = normalizarTexto(
-            link.text()
-          );
-        }
-
-        if (!titulo) {
-          titulo = normalizarTexto(
-            link
-              .closest("article")
-              .find("h2,h3,h4")
-              .first()
-              .text()
-          );
-        }
-
-        if (!titulo) continue;
-
-        noticias.push({
-          titulo,
-          url,
-          descricao: "",
-          data: null,
-          imagem: null,
-        });
-      }
-    } catch (erro) {
-      console.log(
-        `⚠️ LibertyCity: erro em ${pagina}: ${erro.message}`
-      );
-    }
-  }
-
-  // Remover duplicados
-  const unicas = [];
-  const urls = new Set();
-
-  for (const noticia of noticias) {
-    if (urls.has(noticia.url)) continue;
-
-    urls.add(noticia.url);
-    unicas.push(noticia);
-  }
-
-  console.log(
-    `📰 LibertyCity: ${unicas.length} notícias recebidas.`
-  );
-
-  return unicas.slice(0, 10);
-}
-
-// ======================================================
-// ROCKSTAR RSS
-// ======================================================
-
-async function buscarRockstarRSS() {
-  console.log(
-    "🔎 Rockstar: iniciando busca de notícias."
-  );
-
-  const consultas = [
-    "site:rockstargames.com/br/newswire after:2026-09-01",
-    "site:rockstargames.com/newswire after:2026-09-01",
-  ];
-
-  for (const consulta of consultas) {
-    const url =
-      "https://news.google.com/rss/search?q=" +
-      encodeURIComponent(consulta) +
-      "&hl=pt-BR&gl=BR&ceid=BR:pt-419";
-
-    const noticias = await buscarRSS(
-      url,
-      "Rockstar"
-    );
-
-    const filtradas = noticias.filter(
-      (noticia) => {
-        return (
-          noticia.url.includes(
-            "rockstargames.com/br/newswire/"
-          ) ||
-          noticia.url.includes(
-            "rockstargames.com/newswire/"
-          )
+      const resposta =
+        await fazerGet(
+          pagina,
+          3
         );
-      }
-    );
 
-    if (filtradas.length > 0) {
-      console.log(
-        `✅ Rockstar RSS encontrou ${filtradas.length} notícias.`
-      );
-
-      return filtradas;
-    }
-  }
-
-  return [];
-}
-
-// ======================================================
-// ROCKSTAR HTML
-// ======================================================
-
-async function buscarRockstarHTML() {
-  const urls = [
-    "https://www.rockstargames.com/br/newswire",
-    "https://www.rockstargames.com/newswire",
-  ];
-
-  for (const url of urls) {
-    try {
-      const resposta = await getComRetry(
-        url,
-        {
-          responseType: "text",
-        },
-        2
-      );
-
-      const html = resposta.data;
+      const noticias =
+        extrairNoticiasLibertyCity(
+          resposta.data
+        );
 
       console.log(
-        `🔎 Rockstar: HTML recebido (${html.length} caracteres).`
+        `🔎 LibertyCity: ${noticias.length} possíveis notícias em ${pagina}`
       );
 
-      const encontrados = new Set();
-
-      const regex =
-        /https?:\/\/(?:www\.)?rockstargames\.com\/(?:br\/)?newswire\/[a-zA-Z0-9/_-]+/gi;
-
-      const matches =
-        html.match(regex) || [];
-
-      for (const match of matches) {
-        encontrados.add(match);
-      }
-
-      console.log(
-        `🔎 Rockstar: ${encontrados.size} possíveis URLs encontradas.`
-      );
-
-      const noticias = [];
-
-      for (const link of encontrados) {
-        noticias.push({
-          titulo: "Notícia Rockstar",
-          url: link,
-          descricao: "",
-          data: null,
-          imagem: null,
-        });
-      }
-
-      if (noticias.length > 0) {
-        return noticias;
-      }
+      todas.push(...noticias);
     } catch (erro) {
       console.log(
-        `⚠️ Rockstar HTML: ${erro.message}`
+        `⚠️ LibertyCity falhou: ${erro.message}`
       );
     }
   }
 
-  return [];
-}
+  const mapa = new Map();
 
-// ======================================================
-// ROCKSTAR
-// ======================================================
+  for (const noticia of todas) {
+    const chave =
+      normalizarUrl(noticia.url);
 
-async function buscarRockstar() {
-  let noticias =
-    await buscarRockstarRSS();
-
-  if (noticias.length === 0) {
-    console.log(
-      "⚠️ Rockstar RSS sem notícias. Tentando HTML oficial."
-    );
-
-    noticias =
-      await buscarRockstarHTML();
+    if (!mapa.has(chave)) {
+      mapa.set(chave, noticia);
+    }
   }
 
-  noticias = noticias.filter((noticia) =>
-    dataValida(noticia.data)
+  const noticias =
+    [...mapa.values()]
+      .filter((item) =>
+        noticiaRecente(
+          item.data
+        )
+      )
+      .slice(
+        0,
+        MAX_NOTICIAS_POR_FONTE
+      );
+
+  console.log(
+    `📰 LibertyCity: ${noticias.length} notícias recebidas.`
   );
-
-  if (noticias.length === 0) {
-    console.log(
-      "⚠️ Rockstar: nenhuma notícia válida encontrada."
-    );
-  }
 
   return noticias;
 }
 
-// ======================================================
-// VERIFICAR DUPLICIDADE NO DISCORD
-// ======================================================
+// ============================================================
+// GOOGLE NEWS → LINK REAL
+// ============================================================
 
-async function noticiaJaPublicada(canal, url) {
-  if (!url) return false;
-
+async function decodificarGoogleNews(url) {
   try {
-    const mensagens =
-      await canal.messages.fetch({
-        limit: 100,
-      });
+    if (
+      !url ||
+      !url.includes(
+        "news.google.com"
+      )
+    ) {
+      return url;
+    }
 
-    for (const [, mensagem] of mensagens) {
-      for (const embed of mensagem.embeds) {
-        if (embed.url === url) {
-          return true;
+    const parsed =
+      new URL(url);
+
+    const id =
+      parsed.pathname
+        .split("/")
+        .filter(Boolean)
+        .pop();
+
+    if (!id) {
+      return null;
+    }
+
+    console.log(
+      `🔓 Google News: decodificando ${id.substring(
+        0,
+        25
+      )}...`
+    );
+
+    const pagina =
+      await fazerGet(
+        `https://news.google.com/articles/${id}`,
+        2
+      );
+
+    const $ =
+      cheerio.load(
+        pagina.data
+      );
+
+    const div =
+      $("c-wiz > div").first();
+
+    const signature =
+      div.attr(
+        "data-n-a-sg"
+      );
+
+    const timestamp =
+      div.attr(
+        "data-n-a-ts"
+      );
+
+    const articleId =
+      div.attr(
+        "data-n-a-id"
+      ) || id;
+
+    if (
+      !signature ||
+      !timestamp
+    ) {
+      console.log(
+        "⚠️ Google News: parâmetros de decodificação não encontrados."
+      );
+
+      return null;
+    }
+
+    const requestInterno = [
+      "Fbv4je",
+      `["garturlreq",[["X","X",["X","X"],null,null,1,1,"US:en",null,1,null,null,null,null,null,0,1],"X","X",1,[1,1,1],1,1,null,0,0,null,0],"${articleId}",${timestamp},"${signature}"]`,
+    ];
+
+    const corpo =
+      new URLSearchParams({
+        "f.req": JSON.stringify([
+          [requestInterno],
+        ]),
+      }).toString();
+
+    const resposta =
+      await axios.post(
+        "https://news.google.com/_/DotsSplashUi/data/batchexecute",
+        corpo,
+        {
+          timeout: 20000,
+          headers: {
+            "Content-Type":
+              "application/x-www-form-urlencoded;charset=UTF-8",
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140 Safari/537.36",
+          },
         }
+      );
+
+    const partes =
+      String(
+        resposta.data
+      ).split("\n\n");
+
+    if (partes.length < 2) {
+      return null;
+    }
+
+    const bruto =
+      partes[1];
+
+    const primeiroJson =
+      JSON.parse(bruto);
+
+    if (
+      !Array.isArray(
+        primeiroJson
+      ) ||
+      !primeiroJson[0] ||
+      !primeiroJson[0][2]
+    ) {
+      return null;
+    }
+
+    const interno =
+      JSON.parse(
+        primeiroJson[0][2]
+      );
+
+    const urlOriginal =
+      interno?.[1];
+
+    if (
+      typeof urlOriginal ===
+        "string" &&
+      /^https?:\/\//i.test(
+        urlOriginal
+      )
+    ) {
+      console.log(
+        `✅ Google News decodificado: ${urlOriginal}`
+      );
+
+      return urlOriginal;
+    }
+
+    return null;
+  } catch (erro) {
+    console.log(
+      `⚠️ Erro ao decodificar Google News: ${erro.message}`
+    );
+
+    return null;
+  }
+}
+
+// ============================================================
+// ROCKSTAR
+// ============================================================
+
+async function buscarRockstarRSS() {
+  const dataBusca =
+    obterDataBusca(
+      new Date()
+    );
+
+  const consultas = [
+    `site:rockstargames.com/br/newswire/article after:${dataBusca}`,
+    `site:rockstargames.com/newswire/article after:${dataBusca}`,
+  ];
+
+  const resultados = [];
+
+  for (const consulta of consultas) {
+    try {
+      console.log(
+        `🔎 Rockstar RSS: ${consulta}`
+      );
+
+      const url =
+        "https://news.google.com/rss/search?q=" +
+        encodeURIComponent(
+          consulta
+        ) +
+        "&hl=pt-BR&gl=BR&ceid=BR:pt-419";
+
+      const resposta =
+        await fazerGet(
+          url,
+          2
+        );
+
+      const feed =
+        await rssParser.parseString(
+          resposta.data
+        );
+
+      if (
+        !feed.items ||
+        feed.items.length === 0
+      ) {
+        console.log(
+          "⚠️ Rockstar RSS: sem itens."
+        );
+
+        continue;
+      }
+
+      console.log(
+        `📰 Rockstar RSS: ${feed.items.length} itens encontrados.`
+      );
+
+      for (
+        const item of feed.items.slice(
+          0,
+          8
+        )
+      ) {
+        if (
+          !noticiaRecente(
+            item.pubDate
+          )
+        ) {
+          continue;
+        }
+
+        const titulo =
+          limparTexto(
+            item.title
+          );
+
+        const googleUrl =
+          item.link;
 
         if (
-          embed.description &&
-          embed.description.includes(url)
+          !titulo ||
+          !googleUrl
         ) {
-          return true;
+          continue;
         }
+
+        const urlOriginal =
+          await decodificarGoogleNews(
+            googleUrl
+          );
+
+        if (
+          !urlOriginal ||
+          !urlOriginal.includes(
+            "rockstargames.com"
+          )
+        ) {
+          console.log(
+            `⛔ Rockstar: não consegui confirmar URL oficial para "${titulo}"`
+          );
+
+          continue;
+        }
+
+        resultados.push({
+          titulo,
+          url: urlOriginal,
+          resumo:
+            limparTexto(
+              item.contentSnippet ||
+                ""
+            ),
+          data: item.pubDate,
+        });
+
+        if (
+          resultados.length >=
+          MAX_NOTICIAS_POR_FONTE
+        ) {
+          break;
+        }
+
+        // Pequeno intervalo para evitar muitas requisições
+        await esperar(400);
       }
 
       if (
-        mensagem.content &&
-        mensagem.content.includes(url)
+        resultados.length >=
+        MAX_NOTICIAS_POR_FONTE
       ) {
-        return true;
-      }
-    }
-  } catch (erro) {
-    console.log(
-      `⚠️ Erro verificando duplicidade: ${erro.message}`
-    );
-  }
-
-  return false;
-}
-
-// ======================================================
-// PUBLICAR NOTÍCIA
-// ======================================================
-
-async function publicarNoticia(
-  canal,
-  noticia,
-  fonte
-) {
-  if (!noticia || !noticia.url) {
-    return false;
-  }
-
-  let url = noticia.url;
-
-  // Nunca publicar Google News
-  if (url.includes("news.google.com")) {
-    console.log(
-      `⏭️ ${fonte}: link Google News ignorado.`
-    );
-
-    return false;
-  }
-
-  if (
-    await noticiaJaPublicada(
-      canal,
-      url
-    )
-  ) {
-    console.log(
-      `⏭️ ${fonte}: já publicada: ${noticia.titulo}`
-    );
-
-    return false;
-  }
-
-  let titulo =
-    normalizarTexto(noticia.titulo) ||
-    "Nova notícia";
-
-  let descricao =
-    normalizarTexto(noticia.descricao);
-
-  // ====================================================
-  // NOVA PARTE DA V4
-  // Buscar resumo real quando não temos
-  // ====================================================
-
-  if (!resumoValido(descricao, titulo)) {
-    descricao =
-      await buscarResumoPagina(
-        url,
-        fonte,
-        titulo
-      );
-  }
-
-  if (!descricao) {
-    descricao =
-      "Confira todos os detalhes da notícia acessando a matéria completa.";
-  }
-
-  descricao = limitarTexto(
-    descricao,
-    420
-  );
-
-  let frase = "";
-
-  if (fonte === "Fortnite") {
-    frase =
-      fraseAleatoria(FRASES_FORTNITE);
-  } else {
-    frase =
-      fraseAleatoria(FRASES_GTA);
-  }
-
-  const embed = new EmbedBuilder()
-    .setTitle(titulo)
-    .setURL(url)
-    .setDescription(
-      `📰 **Resumo:**\n${descricao}\n\n🔗 **Clique no título acima para ler a matéria completa.**`
-    )
-    .setFooter({
-      text: `Murilito NEWS • ${fonte}`,
-    })
-    .setTimestamp();
-
-  if (noticia.imagem) {
-    try {
-      embed.setImage(noticia.imagem);
-    } catch (_) {}
-  }
-
-  try {
-    await canal.send({
-      content: `@everyone\n${frase}`,
-      embeds: [embed],
-      allowedMentions: {
-        parse: ["everyone"],
-      },
-    });
-
-    console.log(
-      `📢 ${fonte}: notícia publicada.`
-    );
-
-    console.log(
-      `   ${titulo}`
-    );
-
-    console.log(
-      `   ${url}`
-    );
-
-    console.log(
-      `   💬 ${frase}`
-    );
-
-    console.log(
-      `   📰 Resumo: ${descricao}`
-    );
-
-    return true;
-  } catch (erro) {
-    console.log(
-      `❌ ${fonte}: erro ao publicar: ${erro.message}`
-    );
-
-    return false;
-  }
-}
-
-// ======================================================
-// PROCESSAR FONTE
-// ======================================================
-
-async function processarFonte(
-  nome,
-  canalId,
-  buscarFuncao
-) {
-  console.log(
-    `━━━━━━━━ ${nome} ━━━━━━━━`
-  );
-
-  try {
-    const canal =
-      await client.channels.fetch(
-        canalId
-      );
-
-    if (!canal) {
-      console.log(
-        `❌ ${nome}: canal não encontrado.`
-      );
-
-      return;
-    }
-
-    const noticias =
-      await buscarFuncao();
-
-    if (!noticias || noticias.length === 0) {
-      console.log(
-        `⚠️ ${nome}: nenhuma notícia encontrada.`
-      );
-
-      return;
-    }
-
-    console.log(
-      `📰 ${nome}: ${noticias.length} notícias recebidas.`
-    );
-
-    for (const noticia of noticias) {
-      const publicada =
-        await publicarNoticia(
-          canal,
-          noticia,
-          nome
-        );
-
-      if (publicada) {
         break;
       }
+    } catch (erro) {
+      console.log(
+        `⚠️ Rockstar RSS falhou: ${erro.message}`
+      );
     }
-
-    // Pequena pausa entre fontes
-    await new Promise((resolve) =>
-      setTimeout(resolve, 2000)
-    );
-  } catch (erro) {
-    console.log(
-      `❌ ${nome}: erro geral: ${erro.message}`
-    );
   }
+
+  // Deduplicação
+  const mapa = new Map();
+
+  for (const noticia of resultados) {
+    const chave =
+      normalizarUrl(
+        noticia.url
+      );
+
+    if (!mapa.has(chave)) {
+      mapa.set(
+        chave,
+        noticia
+      );
+    }
+  }
+
+  const finais =
+    [...mapa.values()].slice(
+      0,
+      MAX_NOTICIAS_POR_FONTE
+    );
+
+  console.log(
+    `📰 Rockstar: ${finais.length} notícias oficiais encontradas.`
+  );
+
+  return finais;
 }
 
-// ======================================================
-// CICLO DE NOTÍCIAS
-// ======================================================
+async function buscarRockstar() {
+  console.log(
+    "🔎 Rockstar: iniciando busca de notícias."
+  );
 
-let executandoNoticias = false;
+  const noticias =
+    await buscarRockstarRSS();
+
+  return noticias;
+}
+
+// ============================================================
+// CICLO DE NOTÍCIAS
+// ============================================================
 
 async function cicloNoticias() {
   if (executandoNoticias) {
     console.log(
-      "⚠️ Ciclo anterior ainda está rodando. Ignorando."
+      "⏭️ Ciclo de notícias já está rodando."
     );
 
     return;
@@ -1274,132 +1328,252 @@ async function cicloNoticias() {
 
   executandoNoticias = true;
 
+  console.log("");
   console.log(
     "========================================"
   );
-
   console.log(
     "📰 INICIANDO CICLO DE NOTÍCIAS"
   );
-
   console.log(
-    `🇧🇷 ${new Date().toLocaleString("pt-BR", {
-      timeZone: "America/Sao_Paulo",
-    })}`
+    `🇧🇷 ${new Date().toLocaleString(
+      "pt-BR",
+      {
+        timeZone:
+          "America/Sao_Paulo",
+      }
+    )}`
   );
-
   console.log(
     "========================================"
   );
 
   try {
-    await processarFonte(
-      "Fortnite",
-      ID_FORTNITE,
-      buscarFortnite
+    // ========================================================
+    // FORTNITE
+    // ========================================================
+
+    console.log(
+      "━━━━━━━━ Fortnite ━━━━━━━━"
     );
 
-    await processarFonte(
-      "LibertyCity",
-      ID_GTA,
-      buscarLibertyCity
+    try {
+      const canal =
+        await client.channels.fetch(
+          ID_FORTNITE
+        );
+
+      const noticias =
+        await buscarFortnite();
+
+      if (
+        noticias.length === 0
+      ) {
+        console.log(
+          "⚠️ Fortnite: nenhuma notícia encontrada."
+        );
+      } else {
+        console.log(
+          `📰 Fortnite: ${noticias.length} notícias recebidas.`
+        );
+
+        for (const noticia of noticias) {
+          await publicarNoticia(
+            "Fortnite",
+            canal,
+            noticia
+          );
+
+          await esperar(1000);
+        }
+      }
+    } catch (erro) {
+      console.log(
+        "❌ Fortnite: erro no ciclo:",
+        erro.message
+      );
+    }
+
+    // ========================================================
+    // LIBERTYCITY
+    // ========================================================
+
+    console.log(
+      "━━━━━━━━ LibertyCity ━━━━━━━━"
     );
 
-    await processarFonte(
-      "Rockstar",
-      ID_GTA,
-      buscarRockstar
+    try {
+      const canal =
+        await client.channels.fetch(
+          ID_GTA
+        );
+
+      const noticias =
+        await buscarLibertyCity();
+
+      if (
+        noticias.length === 0
+      ) {
+        console.log(
+          "⚠️ LibertyCity: nenhuma notícia encontrada."
+        );
+      } else {
+        for (const noticia of noticias) {
+          await publicarNoticia(
+            "LibertyCity",
+            canal,
+            noticia
+          );
+
+          await esperar(1000);
+        }
+      }
+    } catch (erro) {
+      console.log(
+        "❌ LibertyCity: erro no ciclo:",
+        erro.message
+      );
+    }
+
+    // ========================================================
+    // ROCKSTAR
+    // ========================================================
+
+    console.log(
+      "━━━━━━━━ Rockstar ━━━━━━━━"
     );
+
+    try {
+      const canal =
+        await client.channels.fetch(
+          ID_GTA
+        );
+
+      const noticias =
+        await buscarRockstar();
+
+      if (
+        noticias.length === 0
+      ) {
+        console.log(
+          "⚠️ Rockstar: nenhuma notícia oficial encontrada."
+        );
+      } else {
+        for (const noticia of noticias) {
+          await publicarNoticia(
+            "Rockstar",
+            canal,
+            noticia
+          );
+
+          await esperar(1000);
+        }
+      }
+    } catch (erro) {
+      console.log(
+        "❌ Rockstar: erro no ciclo:",
+        erro.message
+      );
+    }
   } catch (erro) {
     console.log(
-      `❌ Erro no ciclo: ${erro.message}`
+      "❌ Erro geral no ciclo:",
+      erro.message
+    );
+  } finally {
+    executandoNoticias = false;
+
+    console.log(
+      "========================================"
+    );
+    console.log(
+      "🏁 CICLO DE NOTÍCIAS FINALIZADO"
+    );
+    console.log(
+      "========================================"
     );
   }
-
-  console.log(
-    "========================================"
-  );
-
-  console.log(
-    "✅ CICLO FINALIZADO"
-  );
-
-  console.log(
-    "========================================"
-  );
-
-  executandoNoticias = false;
 }
 
-// ======================================================
+// ============================================================
 // LOJA FORTNITE
-// ======================================================
-
-let ultimoDiaLoja = null;
-
-function obterDiaBrasil() {
-  return new Intl.DateTimeFormat(
-    "pt-BR",
-    {
-      timeZone: "America/Sao_Paulo",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }
-  ).format(new Date());
-}
+// ============================================================
 
 async function postarLojaFortnite(
   forcar = false
 ) {
-  const hoje = obterDiaBrasil();
-
-  if (!forcar && ultimoDiaLoja === hoje) {
+  if (executandoLoja) {
     return;
   }
 
+  executandoLoja = true;
+
   try {
+    const hoje =
+      obterDiaBrasil();
+
+    // Já postou hoje
+    if (
+      !forcar &&
+      ultimoDiaLoja === hoje
+    ) {
+      return;
+    }
+
     const canal =
       await client.channels.fetch(
         ID_LOJA
       );
 
-    if (!canal) {
-      console.log(
-        "❌ Canal da loja não encontrado."
-      );
-
-      return;
-    }
-
-    // Evita postar várias vezes no mesmo dia
-    const mensagens =
-      await canal.messages.fetch({
-        limit: 30,
-      });
-
+    // Verifica mensagens recentes
     if (!forcar) {
-      for (const [, mensagem] of mensagens) {
-        if (
-          mensagem.embeds.some(
-            (embed) =>
-              embed.url ===
-              LOJA_FORTNITE
-          )
+      try {
+        const mensagens =
+          await canal.messages.fetch({
+            limit: 50,
+          });
+
+        for (
+          const mensagem of mensagens.values()
         ) {
-          ultimoDiaLoja = hoje;
+          for (
+            const embed of mensagem.embeds
+          ) {
+            if (
+              embed.url &&
+              normalizarUrl(
+                embed.url
+              ) ===
+                normalizarUrl(
+                  LOJA_FORTNITE
+                )
+            ) {
+              ultimoDiaLoja =
+                hoje;
 
-          console.log(
-            "⏭️ Loja Fortnite já publicada hoje."
-          );
+              console.log(
+                "⏭️ Loja Fortnite já publicada hoje."
+              );
 
-          return;
+              return;
+            }
+          }
         }
+      } catch (erro) {
+        console.log(
+          "⚠️ Não foi possível verificar histórico da loja:",
+          erro.message
+        );
       }
     }
 
+    console.log(
+      "🛒 Publicando Loja do Fortnite..."
+    );
+
     const embed =
       new EmbedBuilder()
+        .setColor(0x00a8ff)
         .setTitle(
           "🛒 LOJA DO FORTNITE ATUALIZADA!"
         )
@@ -1407,168 +1581,411 @@ async function postarLojaFortnite(
           LOJA_FORTNITE
         )
         .setDescription(
-          "🔥 A Loja de Itens do Fortnite acabou de atualizar!\n\n" +
-          "👀 Confira as skins, emotes, picaretas, gestos e outros itens disponíveis hoje.\n\n" +
-          "🔗 **Clique no título acima para abrir a loja oficial.**"
+          "🔥 **A Loja de Itens do Fortnite acabou de atualizar!**\n\n" +
+          "👀 Confira todas as skins, picaretas, gestos, mochilas e outros itens disponíveis hoje.\n\n" +
+          "👇 **Clique no título acima para abrir a loja oficial.**"
         )
         .setImage(
           "https://fortnite.gg/img/og-shop.jpg"
         )
         .setFooter({
-          text: "Murilito NEWS • Loja Fortnite",
+          text:
+            "Murilito NEWS • Loja Fortnite",
         })
         .setTimestamp();
 
     await canal.send({
       content:
-        "@everyone\n🛒 CORRE! A LOJA DO FORTNITE ACABOU DE ATUALIZAR! 🔥",
+        "@everyone\n" +
+        "🛒 **CORRE! A LOJA DO FORTNITE ACABOU DE ATUALIZAR! 🔥**",
       embeds: [embed],
       allowedMentions: {
         parse: ["everyone"],
       },
     });
 
-    ultimoDiaLoja = hoje;
+    ultimoDiaLoja =
+      hoje;
 
     console.log(
-      `🛒 Loja Fortnite publicada em ${hoje}.`
+      "✅ Loja Fortnite publicada com sucesso!"
     );
   } catch (erro) {
     console.log(
-      `❌ Erro ao publicar loja Fortnite: ${erro.message}`
+      "❌ Erro ao publicar Loja Fortnite:",
+      erro.message
     );
+  } finally {
+    executandoLoja = false;
   }
 }
 
-// ======================================================
+// ============================================================
+// AGENDAMENTO DA LOJA — 21:00 BRASIL
+// ============================================================
+
+function agendarLoja21h() {
+  const agora =
+    new Date();
+
+  const formatter =
+    new Intl.DateTimeFormat(
+      "en-US",
+      {
+        timeZone:
+          "America/Sao_Paulo",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }
+    );
+
+  const partes =
+    formatter
+      .formatToParts(agora)
+      .reduce(
+        (obj, item) => {
+          obj[item.type] =
+            item.value;
+
+          return obj;
+        },
+        {}
+      );
+
+  const ano =
+    Number(partes.year);
+
+  const mes =
+    Number(partes.month) - 1;
+
+  const dia =
+    Number(partes.day);
+
+  const hora =
+    Number(partes.hour);
+
+  const minuto =
+    Number(partes.minute);
+
+  const segundo =
+    Number(partes.second);
+
+  // Próxima execução aproximada.
+  // O watchdog de 30 segundos garante a postagem mesmo
+  // se houver pequena diferença de horário.
+
+  let proximo =
+    new Date(
+      Date.UTC(
+        ano,
+        mes,
+        dia,
+        21 + 3,
+        0,
+        5
+      )
+    );
+
+  // Durante horário padrão o Brasil é UTC-3.
+  // O cálculo acima representa 21:00 BRT.
+
+  const agoraMs =
+    agora.getTime();
+
+  if (
+    hora > 21 ||
+    (hora === 21 &&
+      minuto >= 1)
+  ) {
+    proximo =
+      new Date(
+        Date.UTC(
+          ano,
+          mes,
+          dia + 1,
+          24,
+          0,
+          5
+        )
+      );
+    }
+
+  let delay =
+    proximo.getTime() -
+    agoraMs;
+
+  // Segurança
+  if (
+    delay < 1000 ||
+    delay >
+      48 * 60 * 60 * 1000
+  ) {
+    delay =
+      60 * 1000;
+  }
+
+  console.log(
+    `⏰ Próxima verificação agendada da loja em aproximadamente ${Math.round(
+      delay / 1000
+    )} segundos.`
+  );
+
+  setTimeout(
+    async () => {
+      console.log(
+        "⏰ HORÁRIO DA LOJA — verificando..."
+      );
+
+      await postarLojaFortnite(
+        true
+      );
+
+      agendarLoja21h();
+    },
+    delay
+  );
+}
+
+// ============================================================
 // COMANDOS
-// ======================================================
+// ============================================================
 
 client.on(
   "messageCreate",
   async (message) => {
-    if (message.author.bot) return;
+    try {
+      if (
+        message.author.bot
+      ) {
+        return;
+      }
 
-    const texto =
-      message.content
-        .trim()
-        .toLowerCase();
-
-    if (texto === "!teste") {
-      await message.reply(
-        "🤖 Murilito NEWS está online e funcionando!"
-      );
-
-      return;
-    }
-
-    if (texto === "!teste fortnite") {
-      const noticias =
-        await buscarFortnite();
+      const conteudo =
+        message.content
+          .trim()
+          .toLowerCase();
 
       if (
-        !noticias ||
-        noticias.length === 0
+        !conteudo.startsWith("!")
+      ) {
+        return;
+      }
+
+      // !teste
+      if (
+        conteudo === "!teste"
       ) {
         await message.reply(
-          "⚠️ Não encontrei notícias do Fortnite."
+          "🤖 **Murilito NEWS está online e funcionando!** 🔥"
         );
 
         return;
       }
 
-      await message.reply(
-        `🎮 Encontrei ${noticias.length} notícias do Fortnite.`
+      // !teste fortnite
+      if (
+        conteudo ===
+        "!teste fortnite"
+      ) {
+        await message.reply(
+          "🎮 Buscando uma notícia do Fortnite..."
+        );
+
+        const noticias =
+          await buscarFortnite();
+
+        if (
+          noticias.length === 0
+        ) {
+          await message.reply(
+            "❌ Não encontrei notícia do Fortnite agora."
+          );
+
+          return;
+        }
+
+        await publicarNoticia(
+          "Fortnite",
+          message.channel,
+          noticias[0]
+        );
+
+        return;
+      }
+
+      // !teste liberty
+      if (
+        conteudo ===
+        "!teste liberty"
+      ) {
+        await message.reply(
+          "🚔 Buscando uma notícia da LibertyCity..."
+        );
+
+        const noticias =
+          await buscarLibertyCity();
+
+        if (
+          noticias.length === 0
+        ) {
+          await message.reply(
+            "❌ Não encontrei notícia da LibertyCity agora."
+          );
+
+          return;
+        }
+
+        await publicarNoticia(
+          "LibertyCity",
+          message.channel,
+          noticias[0]
+        );
+
+        return;
+      }
+
+      // !teste rockstar
+      if (
+        conteudo ===
+        "!teste rockstar"
+      ) {
+        await message.reply(
+          "🚨 Buscando uma notícia oficial da Rockstar..."
+        );
+
+        const noticias =
+          await buscarRockstar();
+
+        if (
+          noticias.length === 0
+        ) {
+          await message.reply(
+            "❌ Não encontrei notícia oficial da Rockstar agora."
+          );
+
+          return;
+        }
+
+        await publicarNoticia(
+          "Rockstar",
+          message.channel,
+          noticias[0]
+        );
+
+        return;
+      }
+
+      // !teste loja
+      if (
+        conteudo ===
+        "!teste loja"
+      ) {
+        await message.reply(
+          "🛒 Publicando teste da Loja Fortnite..."
+        );
+
+        await postarLojaFortnite(
+          true
+        );
+
+        return;
+      }
+
+      // !piada
+      if (
+        conteudo === "!piada"
+      ) {
+        const piadas = [
+          "😂 O GTA 6 atrasou tanto que o GTA 7 já está preocupado.",
+          "😂 Fortnite lançou tanta skin que daqui a pouco precisa de um HD só para guardar os cosméticos.",
+          "😂 O NPC de Los Santos trabalha menos que eu.",
+          "😂 Murilito NEWS: porque fofoca gamer também é informação.",
+          "😂 Se não saiu no Murilito NEWS, espera 10 minutos.",
+          "😂 GTA 6 está chegando... algum dia. Talvez.",
+        ];
+
+        await message.reply(
+          piadas[
+            Math.floor(
+              Math.random() *
+                piadas.length
+            )
+          ]
+        );
+
+        return;
+      }
+
+      // !ajuda
+      if (
+        conteudo === "!ajuda"
+      ) {
+        const embed =
+          new EmbedBuilder()
+            .setColor(
+              0x5865f2
+            )
+            .setTitle(
+              "🤖 MURILITO NEWS — COMANDOS"
+            )
+            .setDescription(
+              [
+                "🎮 **Notícias**",
+                "`!teste fortnite` — Testa notícias do Fortnite",
+                "`!teste liberty` — Testa notícias da LibertyCity",
+                "`!teste rockstar` — Testa notícias da Rockstar",
+                "",
+                "🛒 **Loja**",
+                "`!teste loja` — Testa a postagem da loja",
+                "",
+                "😂 **Diversão**",
+                "`!piada` — Recebe uma piada",
+                "",
+                "🤖 **Sistema**",
+                "`!teste` — Verifica se o bot está online",
+              ].join(
+                "\n"
+              )
+            )
+            .setFooter({
+              text:
+                "Murilito NEWS",
+            });
+
+        await message.reply({
+          embeds: [embed],
+        });
+
+        return;
+      }
+    } catch (erro) {
+      console.log(
+        "❌ Erro no comando:",
+        erro.message
       );
-
-      return;
-    }
-
-    if (texto === "!teste liberty") {
-      const noticias =
-        await buscarLibertyCity();
-
-      await message.reply(
-        `📰 LibertyCity encontrou ${noticias.length} notícias.`
-      );
-
-      return;
-    }
-
-    if (texto === "!teste rockstar") {
-      const noticias =
-        await buscarRockstar();
-
-      await message.reply(
-        `🚔 Rockstar encontrou ${noticias.length} notícias.`
-      );
-
-      return;
-    }
-
-    if (texto === "!teste loja") {
-      await postarLojaFortnite(true);
-
-      await message.reply(
-        "🛒 Teste da loja Fortnite enviado."
-      );
-
-      return;
-    }
-
-    if (texto === "!piada") {
-      const piadas = [
-        "😂 O jogador caiu de uma altura de 1 metro e perdeu a partida.",
-        "😂 O maior inimigo do GTA é o boleto.",
-        "😂 Fortnite sem V-Bucks é igual GTA sem carro: triste.",
-        "😂 O Murilito NEWS nunca dorme. Só o servidor.",
-        "😂 A polícia de Los Santos pediu para eu parar de publicar notícia.",
-      ];
-
-      await message.reply(
-        piadas[
-          Math.floor(
-            Math.random() *
-              piadas.length
-          )
-        ]
-      );
-
-      return;
-    }
-
-    if (texto === "!ajuda") {
-      await message.reply(
-        "🤖 **MURILITO NEWS**\n\n" +
-          "`!teste` → testa o bot\n" +
-          "`!teste fortnite` → testa notícias Fortnite\n" +
-          "`!teste liberty` → testa LibertyCity\n" +
-          "`!teste rockstar` → testa Rockstar\n" +
-          "`!teste loja` → testa a Loja Fortnite\n" +
-          "`!piada` → manda uma piada\n" +
-          "`!ajuda` → mostra os comandos"
-      );
-
-      return;
     }
   }
 );
 
-// ======================================================
-// BOT ONLINE
-// ======================================================
+// ============================================================
+// EVENTO ONLINE
+// ============================================================
 
 client.once(
-  "ready",
+  "clientReady",
   async () => {
+    console.log("");
     console.log(
       "========================================"
     );
-
     console.log(
       `🤖 ${client.user.tag} está ONLINE!`
     );
-
     console.log(
       "========================================"
     );
@@ -1593,28 +2010,66 @@ client.once(
       "========================================"
     );
 
-    // Executa notícias imediatamente
+    // Faz um ciclo logo ao iniciar
     await cicloNoticias();
 
-    // Verifica loja
+    // Verifica a loja ao iniciar
     await postarLojaFortnite();
 
     // Notícias a cada 10 minutos
     setInterval(
-      cicloNoticias,
+      async () => {
+        await cicloNoticias();
+      },
       INTERVALO_NOTICIAS
     );
 
-    // Verificação da loja
+    // Watchdog da loja
     setInterval(
-      postarLojaFortnite,
+      async () => {
+        const hora =
+          obterHoraBrasil();
+
+        console.log(
+          `🕘 Watchdog loja: ${hora}`
+        );
+
+        await postarLojaFortnite();
+      },
       INTERVALO_VERIFICACAO_LOJA
+    );
+
+    // Agendamento 21h
+    agendarLoja21h();
+  }
+);
+
+// ============================================================
+// ERROS GERAIS
+// ============================================================
+
+process.on(
+  "unhandledRejection",
+  (erro) => {
+    console.error(
+      "❌ Unhandled Rejection:",
+      erro
     );
   }
 );
 
-// ======================================================
+process.on(
+  "uncaughtException",
+  (erro) => {
+    console.error(
+      "❌ Uncaught Exception:",
+      erro
+    );
+  }
+);
+
+// ============================================================
 // LOGIN
-// ======================================================
+// ============================================================
 
 client.login(TOKEN);
