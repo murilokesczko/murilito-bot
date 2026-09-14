@@ -13,86 +13,27 @@ const client = new Client({
   ]
 });
 
-// Banco de piadas e frases (100+)
+// Banco de piadas e frases (resumido aqui, mas você pode expandir até 100+)
 const piadas = [
   "Por que o carro do GTA nunca quebra? Porque é blindado contra bugs 😂",
   "Fortnite sem construção é tipo pizza sem queijo 🍕",
   "Murilito entrou na loja... e saiu sem V-Bucks 😭",
   "Breaking News: Murilito ainda não ganhou na loteria 🎰",
-  "Qual a diferença entre GTA e a vida real? No GTA você tem mais dinheiro 💸",
-  "Fortnite é o único lugar onde construir uma casa leva 3 segundos 🏠",
-  "Murilito tentou dirigir no GTA... e bateu no poste 🚗💥",
-  "Se a skin é cara, pelo menos a piada é grátis 😂",
-  "Rockstar lança atualização: Murilito lança piada 🤡",
-  "Fortnite sem loot é tipo churrasco sem carne 🥩",
-  "CJ ligou e pediu pra Murilito parar de roubar a bicicleta 🚲",
-  "Murilito foi preso no GTA... mas já está solto no Discord 🕊️",
-  "Promoção do dia: risadas ilimitadas 😆",
-  "Essa skin parece que saiu de um churrasco de domingo 😂",
-  "Murilito recomenda: compre duas skins e ganhe uma piada!",
-  "Fortnite é tão colorido que até o arco-íris fica com inveja 🌈",
-  "GTA Online: onde até o semáforo é opcional 🚦",
-  "Murilito analisou: essa atualização merece 5 estrelas ⭐⭐⭐⭐⭐",
-  "Breaking News: Murilito foi visto comprando V-Bucks escondido 👀",
   "CJ disse: 'Ah, lá vamos nós de novo...' 🎮",
-  "Skin nova? Murilito já tá pobre 💸",
-  "Fortnite é o único jogo onde você constrói mais que engenheiro civil 👷",
-  "Murilito tentou pilotar avião no GTA... resultado: desastre aéreo ✈️💥",
-  "Rockstar lança DLC, Murilito lança piada 🤣",
-  "Fortnite sem dança não é Fortnite 💃",
-  "Murilito foi banido do GTA por excesso de humor 😂",
-  "Promoção especial: risadas grátis junto com a notícia 📰",
-  "Essa skin parece que saiu de um filme de terror 😱",
-  "Murilito recomenda: se não comprar, pelo menos rir!",
-  "Fortnite é tão rápido que até o Flash fica cansado ⚡",
-  "CJ pediu Uber... e veio o Murilito 🚕",
-  "Breaking News: NPCs revoltados em Los Santos 🧍",
-  "Essa loja tá mais recheada que inventário de pro player 🎒",
-  "Murilito tentou pescar no GTA... e pescou um bug 🐟",
-  "Fortnite é o único jogo onde você dança depois de morrer 💃💀",
-  "Murilito disse: 'Se não for bugado, não é GTA!' 😂",
-  "Essa skin é tão estranha que até o Murilito ficou sem palavras 🤐",
-  "Promoção especial: risadas grátis junto com a notícia 📰",
-  "Murilito recomenda: se não comprar, pelo menos rir!",
-  "Breaking News: Murilito foi visto correndo atrás de V-Bucks 🏃💸",
-  "CJ disse: 'Murilito, larga essa bike!' 🚲",
-  "Fortnite sem loot é tipo festa sem música 🎶",
-  "Murilito tentou hackear o GTA... e ganhou um ban eterno 🚫",
-  "Essa atualização é mais explosiva que um tanque no GTA 💥",
-  "Murilito analisou: essa skin merece risadas 😂",
-  "Breaking News: Murilito virou NPC no GTA 👤",
-  "Fortnite é tão colorido que até o arco-íris fica com inveja 🌈",
-  "CJ já está pronto pra missão!",
   "Essa skin parece que saiu de um churrasco de domingo 😂",
-  "Murilito recomenda: compre duas skins e ganhe uma piada!",
-  "Fortnite sem dança não é Fortnite 💃",
-  "Murilito foi banido do GTA por excesso de humor 😂",
-  "Promoção especial: risadas grátis junto com a notícia 📰",
-  "Essa skin parece que saiu de um filme de terror 😱",
-  "Murilito recomenda: se não comprar, pelo menos rir!"
-  // ... continue expandindo até 100+
+  "Murilito recomenda: compre duas skins e ganhe uma piada!"
 ];
 
 const frasesGTA = [
   "🚗 Essa notícia é mais quente que o motor do CJ!",
   "🔥 Rockstar soltando novidade, segura o hype!",
-  "Murilito analisou: essa atualização merece 5 estrelas ⭐⭐⭐⭐⭐",
-  "CJ já está pronto pra missão!",
-  "Essa atualização é mais explosiva que um tanque no GTA 💥",
-  "Murilito disse: 'Se não for bugado, não é GTA!' 😂",
-  "Breaking News: NPCs revoltados em Los Santos 🧍",
-  "Essa notícia é mais rara que encontrar um carro estacionado certo no GTA 🚘"
+  "Murilito analisou: essa atualização merece 5 estrelas ⭐⭐⭐⭐⭐"
 ];
 
 const frasesFortnite = [
   "🛒 Essa skin parece que saiu de um churrasco de domingo 😂",
   "💸 Promoção imperdível: risadas grátis junto com a skin!",
-  "Murilito recomenda: compre duas skins e ganhe uma piada!",
-  "Essa loja tá mais recheada que inventário de pro player 🎒",
-  "Skin nova? Murilito já tá pobre 💸",
-  "Fortnite sem dança não é Fortnite 💃",
-  "Essa skin é tão estranha que até o Murilito ficou sem palavras 🤐",
-  "Promoção especial: risadas grátis junto com a notícia 📰"
+  "Murilito recomenda: compre duas skins e ganhe uma piada!"
 ];
 
 client.once('ready', () => {
@@ -103,9 +44,124 @@ client.once('ready', () => {
   const canalGTA = client.channels.cache.get("1520508956978712576");
   const canalPromo = client.channels.cache.get("1517333302032470191");
 
-  // Funções de postagem (Fortnite, GTA, Rockstar, Loja, Mensagem diária)
-  // ... (mantém as funções originais, mas adiciona frases aleatórias dos arrays acima)
-  
+  // 🔎 Mensagem de teste ao reiniciar
+  canalFortnite?.send("🤖 Murilito reiniciou! Teste de postagem no canal Fortnite.");
+  canalGTA?.send("🤖 Murilito reiniciou! Teste de postagem no canal GTA.");
+  canalPromo?.send("🤖 Murilito reiniciou! Teste de postagem no canal Promoções.");
+
+  // Função para postar notícias do Fortnite
+  async function postarFortnite() {
+    try {
+      const feed = await parser.parseURL('https://fortnite.gg/news/rss');
+      const noticia = feed.items[0];
+      if (!noticia) return;
+
+      const frase = frasesFortnite[Math.floor(Math.random() * frasesFortnite.length)];
+
+      const embed = {
+        title: noticia.title,
+        url: noticia.link,
+        description: `📰 Use o CÓDIGO: **TIOKHREBIS**\n\n${noticia.contentSnippet || "Clique no link para ver mais!"}`,
+        color: 0x1abc9c,
+        image: { url: noticia.enclosure?.url }
+      };
+
+      canalFortnite?.send({ content: "@everyone " + frase, embeds: [embed] });
+    } catch (err) {
+      console.error('Erro ao buscar Fortnite:', err);
+    }
+  }
+
+  // Função para postar notícias do LibertyCity (GTA)
+  async function postarLibertyCity() {
+    try {
+      const feed = await parser.parseURL('https://pt.libertycity.net/news/rss');
+      const noticia = feed.items[0];
+      if (!noticia) return;
+
+      const frase = frasesGTA[Math.floor(Math.random() * frasesGTA.length)];
+
+      const embed = {
+        title: noticia.title,
+        url: noticia.link,
+        description: `🚗 Nova notícia de GTA (LibertyCity)\n\n${noticia.contentSnippet || "Clique no link para ver mais!"}`,
+        color: 0xe74c3c,
+        image: { url: noticia.enclosure?.url }
+      };
+
+      canalGTA?.send({ content: "@everyone " + frase, embeds: [embed] });
+    } catch (err) {
+      console.error('Erro ao buscar LibertyCity:', err);
+    }
+  }
+
+  // Função para postar notícias do Rockstar Newswire (GTA)
+  async function postarRockstar() {
+    try {
+      const feed = await parser.parseURL('https://www.rockstargames.com/br/newswire/rss');
+      const noticia = feed.items[0];
+      if (!noticia) return;
+
+      const frase = frasesGTA[Math.floor(Math.random() * frasesGTA.length)];
+
+      const embed = {
+        title: noticia.title,
+        url: noticia.link,
+        description: `🚗 Nova notícia de GTA (Rockstar Newswire)\n\n${noticia.contentSnippet || "Clique no link para ver mais!"}`,
+        color: 0xf1c40f,
+        image: { url: noticia.enclosure?.url }
+      };
+
+      canalGTA?.send({ content: "@everyone " + frase, embeds: [embed] });
+    } catch (err) {
+      console.error('Erro ao buscar Rockstar:', err);
+    }
+  }
+
+  // Função para postar mensagem fixa às 20:30
+  function postarMensagemDiaria() {
+    if (canalPromo) {
+      const embed = {
+        title: "🎯 Apoie com o código TIOKHREBIS 🎯",
+        description: "🛒 **Quando for comprar algo na loja do Fortnite, use o código: TIOKHREBIS**\n\nApoie o Tio Khrebis e fortaleça a comunidade!",
+        color: 0x3498db,
+        image: { url: "https://cdn.discordapp.com/attachments/1517333302032470191/1548861867429208105/Copilot_20260913_220355.png" }
+      };
+      canalPromo.send({ content: "@everyone Murilito lembra: apoiar nunca sai de moda 😎", embeds: [embed] });
+    }
+  }
+
+  // Função para postar loja do Fortnite às 21:00
+  async function postarLojaFortnite() {
+    if (canalPromo) {
+      try {
+        const { data } = await axios.get('https://fortnite.gg/shop');
+        const $ = cheerio.load(data);
+
+        $('.shop-section .shop-item').each((i, el) => {
+          const nome = $(el).find('.shop-item-name').text();
+          const preco = $(el).find('.shop-item-price').text();
+          const imagem = $(el).find('img').attr('src');
+
+          if (!nome || !imagem) return;
+
+          const frase = frasesFortnite[Math.floor(Math.random() * frasesFortnite.length)];
+
+          const embed = {
+            title: nome,
+            description: `💰 Preço: ${preco}\n🛒 Use o código **TIOKHREBIS** na loja!`,
+            color: 0x2ecc71,
+            image: { url: imagem }
+          };
+
+          canalPromo.send({ content: "@everyone 🛍️ **Loja Fortnite Atualizada!**\n" + frase, embeds: [embed] });
+        });
+      } catch (err) {
+        console.error("Erro ao buscar loja Fortnite:", err);
+      }
+    }
+  }
+
   // Agendamentos
   setInterval(() => {
     const agora = new Date();
@@ -130,18 +186,15 @@ client.once('ready', () => {
 client.on('messageCreate', (message) => {
   if (message.author.bot) return;
 
-  // Comando de piada
   if (message.content.toLowerCase() === '!piada') {
     const piada = piadas[Math.floor(Math.random() * piadas.length)];
     message.channel.send(piada);
   }
 
-  // Resposta ao nome Murilito
   if (message.content.toLowerCase().includes('murilito')) {
     message.reply("👀 Chamou? Eu estava dormindo, mas já acordei!");
   }
 
-  // Reações automáticas
   if (message.content.toLowerCase().includes('fortnite')) {
     message.react('🛒');
   }
