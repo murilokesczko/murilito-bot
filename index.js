@@ -20,10 +20,10 @@ client.once('ready', () => {
 
   // Mensagem de teste ao iniciar
   if (canalFortnite) {
-    canalFortnite.send("@everyone ✅ Teste: Murilo NEWS está funcionando e pronto pra postar notícias de Fortnite!");
+    canalFortnite.send("@everyone ✅ Teste: Murilito NEWS está funcionando e pronto pra postar notícias de Fortnite!");
   }
   if (canalGTA) {
-    canalGTA.send("@everyone ✅ Teste: Murilo NEWS está funcionando e pronto pra postar notícias de GTA!");
+    canalGTA.send("@everyone ✅ Teste: Murilito NEWS está funcionando e pronto pra postar notícias de GTA!");
   }
 
   // Função para postar notícias do Fortnite
