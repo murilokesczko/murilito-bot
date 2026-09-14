@@ -7,9 +7,7 @@ const {
 } = require("discord.js");
 
 const axios = require("axios");
-const cheerio = require("cheerio");
 const puppeteer = require("puppeteer");
-const Parser = require("rss-parser");
 
 
 // ============================================================
@@ -40,8 +38,8 @@ const ID_GTA = "1520508956978712576";
 const LOJA_FORTNITE =
   "https://www.fortnite.com/item-shop?lang=pt-BR";
 
-const FORTNITE_OFICIAL =
-  "https://www.fortnite.com/news?lang=pt-BR";
+const FORTNITE_GG =
+  "https://fortnite.gg/news";
 
 const LIBERTYCITY =
   "https://pt.libertycity.net/news/";
@@ -51,27 +49,7 @@ const ROCKSTAR =
 
 
 // ============================================================
-// RSSHUB
-// ============================================================
-//
-// O RSSHub possui uma rota específica para Fortnite.
-// Usamos vários servidores como fallback.
-//
-// Se um servidor estiver fora do ar ou bloqueado,
-// o próximo é tentado automaticamente.
-//
-
-const FORTNITE_RSSHUB = [
-  "https://rsshub.app/fortnite/news/lang=pt-BR",
-  "https://rsshub.rssforever.com/fortnite/news/lang=pt-BR",
-  "https://rsshub.feeded.xyz/fortnite/news/lang=pt-BR",
-  "https://hub.slarker.me/fortnite/news/lang=pt-BR",
-  "https://rsshub.pseudoyu.com/fortnite/news/lang=pt-BR"
-];
-
-
-// ============================================================
-// CLIENTES
+// CLIENT
 // ============================================================
 
 const client = new Client({
@@ -80,10 +58,6 @@ const client = new Client({
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent
   ]
-});
-
-const rssParser = new Parser({
-  timeout: 30000
 });
 
 
@@ -293,7 +267,7 @@ async function publicarNoticia(tipo, noticia) {
     noticia.link ||
     (
       ehFortnite
-        ? FORTNITE_OFICIAL
+        ? FORTNITE_GG
         : ""
     );
 
@@ -317,7 +291,8 @@ async function publicarNoticia(tipo, noticia) {
       .setURL(link)
       .setDescription(
         ehFortnite
-          ? "🎮 Confira a novidade diretamente no site oficial do Fortnite.\n\n👇 Clique no título acima para acessar a matéria."
+          ? "🎮 Confira a notícia do Fortnite no Fortnite.GG.\n\n" +
+            "👇 Clique no título acima para acessar."
           : (
               criarResumo(
                 noticia.description
@@ -340,7 +315,6 @@ async function publicarNoticia(tipo, noticia) {
 
 
   // GTA continua podendo usar imagem.
-  // Fortnite nesta versão não depende de imagem.
   if (
     !ehFortnite &&
     urlValida(noticia.image)
@@ -381,13 +355,14 @@ async function publicarNoticia(tipo, noticia) {
     );
 
 
-    // Tenta uma mensagem simples.
+    // Tenta mensagem simples.
     try {
 
       await canal.send(
         chamada +
         "\n\n" +
-        "🎮 **" +
+        emoji +
+        " **" +
         titulo +
         "**\n" +
         link
@@ -513,263 +488,230 @@ async function noticiaJaPublicada(
 
 
 // ============================================================
-// FORTNITE VIA RSSHUB
+// FORTNITE - FORTNITE.GG
 // ============================================================
-//
-// NÃO acessa fortnite.com diretamente.
-// O RSSHub faz essa parte.
-//
-// O resultado traz:
-// - título
-// - link oficial
-// - data
-// - descrição
-//
-// Para esta primeira versão só dependemos
-// de título + link.
-//
 
 async function buscarNoticiasFortnite() {
 
   console.log(
-    "🔎 Fortnite: procurando feed RSS..."
+    "🔎 Fortnite: procurando notícias no Fortnite.GG..."
   );
 
 
-  for (
-    const feedUrl
-    of FORTNITE_RSSHUB
-  ) {
+  let page = null;
 
-    try {
 
-      console.log(
-        "🌐 Tentando RSSHub:",
-        feedUrl
+  try {
+
+    page =
+      await novaPagina();
+
+
+    console.log(
+      "🌐 Fortnite.GG abrindo: " +
+      FORTNITE_GG
+    );
+
+
+    const response =
+      await page.goto(
+        FORTNITE_GG,
+        {
+          waitUntil:
+            "domcontentloaded",
+
+          timeout:
+            45000
+        }
       );
 
 
-      const resposta =
-        await axios.get(
-          feedUrl,
-          {
-            timeout: 30000,
-
-            headers: {
-              "User-Agent":
-                "Mozilla/5.0 " +
-                "(Windows NT 10.0; Win64; x64) " +
-                "AppleWebKit/537.36 " +
-                "Chrome/140.0 Safari/537.36",
-
-              "Accept":
-                "application/rss+xml, application/xml, text/xml, */*"
-            },
-
-            validateStatus:
-              () => true
-          }
-        );
-
+    if (response) {
 
       console.log(
-        "🌐 RSSHub status:",
-        resposta.status
+        "🌐 Fortnite.GG status:",
+        response.status()
       );
+    }
 
 
-      if (
-        resposta.status < 200 ||
-        resposta.status >= 300
-      ) {
-
-        console.log(
-          "⚠️ RSSHub rejeitou:",
-          resposta.status
-        );
-
-        continue;
-      }
+    await new Promise(
+      resolve =>
+        setTimeout(resolve, 2500)
+    );
 
 
-      if (
-        typeof resposta.data !== "string"
-      ) {
+    const noticias =
+      await page.evaluate(() => {
 
-        console.log(
-          "⚠️ RSSHub não retornou XML."
-        );
+        const resultado = [];
 
-        continue;
-      }
+        const vistos =
+          new Set();
 
 
-      const feed =
-        await rssParser.parseString(
-          resposta.data
-        );
+        const links =
+          Array.from(
+            document.querySelectorAll("a")
+          );
 
 
-      if (
-        !feed ||
-        !Array.isArray(feed.items)
-      ) {
-
-        console.log(
-          "⚠️ Feed sem itens."
-        );
-
-        continue;
-      }
-
-
-      console.log(
-        "📰 RSSHub encontrou",
-        feed.items.length,
-        "notícias."
-      );
-
-
-      const noticias = [];
-
-
-      for (
-        const item
-        of feed.items
-      ) {
-
-        const titulo =
-          (
-            item.title || ""
-          ).trim();
-
-
-        let link =
-          (
-            item.link || ""
-          ).trim();
-
-
-        if (
-          !titulo ||
-          !link
-        ) {
-          continue;
-        }
-
-
-        // Algumas versões de RSSHub
-        // podem retornar links relativos.
-        if (
-          !urlValida(link)
+        for (
+          const a
+          of links
         ) {
 
-          link =
-            urlAbsoluta(
-              link,
-              "https://www.fortnite.com"
-            );
-        }
+          const href =
+            a.href || "";
 
 
-        if (
-          !urlValida(link)
-        ) {
-          continue;
-        }
-
-
-        // IMPORTANTE:
-        // queremos a matéria oficial.
-        //
-        // Se por algum motivo o feed
-        // devolver um link do próprio RSSHub,
-        // tentamos usar o guid/link original.
-        //
-
-        let linkFinal =
-          link;
-
-
-        if (
-          link.includes("rsshub")
-        ) {
-
-          const guid =
+          const titulo =
             (
-              item.guid || ""
-            ).trim();
+              a.innerText || ""
+            )
+              .replace(/\s+/g, " ")
+              .trim();
 
 
           if (
-            urlValida(guid) &&
-            guid.includes("fortnite.com")
+            !href ||
+            !titulo
           ) {
-
-            linkFinal = guid;
+            continue;
           }
+
+
+          if (
+            !href.startsWith(
+              "https://fortnite.gg/news/"
+            )
+          ) {
+            continue;
+          }
+
+
+          if (
+            href ===
+            "https://fortnite.gg/news/"
+          ) {
+            continue;
+          }
+
+
+          if (
+            titulo.length < 5
+          ) {
+            continue;
+          }
+
+
+          if (
+            titulo === "Fortnite News" ||
+            titulo === "Play Now" ||
+            titulo === "Check it Out" ||
+            titulo === "Check Them Out" ||
+            titulo === "Compete Now"
+          ) {
+            continue;
+          }
+
+
+          if (
+            vistos.has(href)
+          ) {
+            continue;
+          }
+
+
+          vistos.add(href);
+
+
+          resultado.push({
+
+            title:
+              titulo,
+
+            link:
+              href,
+
+            description:
+              "",
+
+            image:
+              null,
+
+            date:
+              new Date().toISOString()
+
+          });
         }
 
 
-        noticias.push({
-
-          title: titulo,
-
-          link: linkFinal,
-
-          description:
-            item.contentSnippet ||
-            item.content ||
-            item.description ||
-            "",
-
-          image: null,
-
-          date:
-            item.isoDate ||
-            item.pubDate ||
-            null
-        });
-      }
+        return resultado;
+      });
 
 
-      if (
-        noticias.length === 0
-      ) {
+    console.log(
+      "📰 Fortnite.GG encontrou:",
+      noticias.length,
+      "links."
+    );
 
-        console.log(
-          "⚠️ Feed respondeu, mas não trouxe notícias válidas."
-        );
 
-        continue;
-      }
+    if (
+      noticias &&
+      noticias.length > 0
+    ) {
+
+      console.log(
+        "✅ Fortnite: fonte funcionando!"
+      );
 
 
       console.log(
-        "✅ Fortnite: fonte encontrada!"
+        "📰 Primeira notícia:",
+        noticias[0].title
+      );
+
+
+      console.log(
+        "🔗:",
+        noticias[0].link
       );
 
 
       return noticias;
+    }
 
-    } catch (erro) {
 
-      console.log(
-        "⚠️ Falha neste RSSHub:",
-        erro.message
-      );
+    console.log(
+      "⚠️ Fortnite.GG respondeu, mas nenhum link de notícia foi encontrado."
+    );
 
-      continue;
+
+    return [];
+
+
+  } catch (erro) {
+
+    console.log(
+      "❌ Fortnite.GG falhou:",
+      erro.message
+    );
+
+
+    return [];
+
+
+  } finally {
+
+    if (page) {
+
+      try {
+        await page.close();
+      } catch {}
     }
   }
-
-
-  console.log(
-    "❌ TODOS os servidores RSSHub falharam."
-  );
-
-
-  return [];
 }
 
 
@@ -938,14 +880,17 @@ async function buscarNoticiasLibertyCity() {
 
           resultado.push({
 
-            title: titulo,
+            title:
+              titulo,
 
-            link: href,
+            link:
+              href,
 
             description:
               description,
 
-            image: image
+            image:
+              image
           });
         }
 
@@ -1013,6 +958,7 @@ async function buscarNoticiasLibertyCity() {
 
     return unicas;
 
+
   } catch (erro) {
 
     console.log(
@@ -1022,6 +968,7 @@ async function buscarNoticiasLibertyCity() {
 
 
     return [];
+
 
   } finally {
 
@@ -1198,14 +1145,17 @@ async function buscarNoticiasRockstar() {
 
           resultado.push({
 
-            title: titulo,
+            title:
+              titulo,
 
-            link: href,
+            link:
+              href,
 
             description:
               description,
 
-            image: image
+            image:
+              image
           });
         }
 
@@ -1273,6 +1223,7 @@ async function buscarNoticiasRockstar() {
 
     return unicas;
 
+
   } catch (erro) {
 
     console.log(
@@ -1282,6 +1233,7 @@ async function buscarNoticiasRockstar() {
 
 
     return [];
+
 
   } finally {
 
@@ -1323,7 +1275,6 @@ async function processarNoticias(
   let publicadas = 0;
 
 
-  // Máximo 3 por ciclo.
   const limite =
     noticias.slice(0, 3);
 
@@ -1494,12 +1445,14 @@ async function cicloNoticias() {
       "📰 CICLO FINALIZADO"
     );
 
+
   } catch (erro) {
 
     console.log(
       "❌ Erro geral no ciclo:",
       erro.message
     );
+
 
   } finally {
 
@@ -1584,6 +1537,7 @@ async function publicarLoja() {
     console.log(
       "🛒 Loja do Fortnite publicada."
     );
+
 
   } catch (erro) {
 
@@ -1799,6 +1753,7 @@ async function testeLoja() {
     console.log(
       "🧪 Teste da loja enviado."
     );
+
 
   } catch (erro) {
 
