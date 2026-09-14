@@ -47,53 +47,27 @@ const frasesFortnite = [
 // Funções de postagem com scraping e seletores específicos
 async function postarFortnite(channel) {
   try {
-    const feed = await parser.parseURL('https://fortnite.gg/news/rss');
+    const feed = await parser.parseURL('https://www.fortnite.com/news/rss?lang=pt-BR');
     const noticia = feed.items[0];
     if (!noticia) {
-      channel.send("❌ Não consegui buscar notícia de Fortnite. Veja direto em https://fortnite.gg/news");
+      channel.send("❌ Não consegui buscar notícia de Fortnite. Veja direto em https://www.fortnite.com/news?lang=pt-BR");
       return;
     }
 
     const response = await axios.get(noticia.link);
     const $ = cheerio.load(response.data);
-    const textoCompleto = $('.post-content, .content').text().trim().slice(0, 1000);
+    const textoCompleto = $('.news-article-content, .article-body').text().trim().slice(0, 1000);
 
     const embed = {
       title: noticia.title || "Notícia Fortnite",
-      url: noticia.link || "https://fortnite.gg/news",
+      url: noticia.link || "https://www.fortnite.com/news?lang=pt-BR",
       description: `📰 Use o CÓDIGO: **TIOKHREBIS**\n\n${textoCompleto || noticia.contentSnippet || "Clique no link para ver mais!"}`,
       color: 0x1abc9c
     };
     channel.send({ content: "@everyone Última notícia Fortnite:", embeds: [embed] });
   } catch (err) {
     console.error('Erro ao buscar Fortnite:', err);
-    channel.send("❌ Erro ao buscar notícia de Fortnite. Veja direto em https://fortnite.gg/news");
-  }
-}
-
-async function postarLibertyCity(channel) {
-  try {
-    const feed = await parser.parseURL('https://pt.libertycity.net/news/rss');
-    const noticia = feed.items[0];
-    if (!noticia) {
-      channel.send("❌ Não consegui buscar notícia de LibertyCity. Veja direto em https://pt.libertycity.net/news");
-      return;
-    }
-
-    const response = await axios.get(noticia.link);
-    const $ = cheerio.load(response.data);
-    const textoCompleto = $('.news-text, .content').text().trim().slice(0, 1000);
-
-    const embed = {
-      title: noticia.title || "Notícia LibertyCity",
-      url: noticia.link || "https://pt.libertycity.net/news",
-      description: `🚗 Nova notícia de GTA (LibertyCity)\n\n${textoCompleto || noticia.contentSnippet || "Clique no link para ver mais!"}`,
-      color: 0xe74c3c
-    };
-    channel.send({ content: "@everyone Última notícia LibertyCity:", embeds: [embed] });
-  } catch (err) {
-    console.error('Erro ao buscar LibertyCity:', err);
-    channel.send("❌ Erro ao buscar notícia de LibertyCity. Veja direto em https://pt.libertycity.net/news");
+    channel.send("❌ Erro ao buscar notícia de Fortnite. Veja direto em https://www.fortnite.com/news?lang=pt-BR");
   }
 }
 
@@ -108,7 +82,7 @@ async function postarRockstar(channel) {
 
     const response = await axios.get(noticia.link);
     const $ = cheerio.load(response.data);
-    const textoCompleto = $('.article-body .content, .content').text().trim().slice(0, 1000);
+    const textoCompleto = $('.body-content, .article-content').text().trim().slice(0, 1000);
 
     const embed = {
       title: noticia.title || "Notícia Rockstar",
@@ -159,7 +133,6 @@ client.once('ready', () => {
   }, 60000);
 
   setInterval(() => postarFortnite(canalFortnite), 600000);
-  setInterval(() => postarLibertyCity(canalGTA), 600000);
   setInterval(() => postarRockstar(canalGTA), 600000);
 });
 
@@ -172,7 +145,6 @@ client.on('messageCreate', async (message) => {
     await message.channel.send("🔎 Testando Murilito... Últimas postagens reais:");
 
     await postarFortnite(client.channels.cache.get(ID_FORTNITE));
-    await postarLibertyCity(client.channels.cache.get(ID_GTA));
     await postarRockstar(client.channels.cache.get(ID_GTA));
     await postarLojaFortnite(client.channels.cache.get(ID_LOJA));
   }
