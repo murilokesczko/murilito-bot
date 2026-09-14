@@ -13,23 +13,19 @@ const client = new Client({
   ]
 });
 
-// Banco de piadas e frases (resumido aqui, mas você pode expandir até 100+)
+// Piadas e frases
 const piadas = [
   "Por que o carro do GTA nunca quebra? Porque é blindado contra bugs 😂",
   "Fortnite sem construção é tipo pizza sem queijo 🍕",
   "Murilito entrou na loja... e saiu sem V-Bucks 😭",
   "Breaking News: Murilito ainda não ganhou na loteria 🎰",
-  "CJ disse: 'Ah, lá vamos nós de novo...' 🎮",
-  "Essa skin parece que saiu de um churrasco de domingo 😂",
-  "Murilito recomenda: compre duas skins e ganhe uma piada!"
+  "CJ disse: 'Ah, lá vamos nós de novo...' 🎮"
 ];
-
 const frasesGTA = [
   "🚗 Essa notícia é mais quente que o motor do CJ!",
   "🔥 Rockstar soltando novidade, segura o hype!",
   "Murilito analisou: essa atualização merece 5 estrelas ⭐⭐⭐⭐⭐"
 ];
-
 const frasesFortnite = [
   "🛒 Essa skin parece que saiu de um churrasco de domingo 😂",
   "💸 Promoção imperdível: risadas grátis junto com a skin!",
@@ -44,20 +40,18 @@ client.once('ready', () => {
   const canalGTA = client.channels.cache.get("1520508956978712576");
   const canalPromo = client.channels.cache.get("1517333302032470191");
 
-  // 🔎 Mensagem de teste ao reiniciar
+  // Mensagem de teste ao reiniciar
   canalFortnite?.send("🤖 Murilito reiniciou! Teste de postagem no canal Fortnite.");
   canalGTA?.send("🤖 Murilito reiniciou! Teste de postagem no canal GTA.");
   canalPromo?.send("🤖 Murilito reiniciou! Teste de postagem no canal Promoções.");
 
-  // Função para postar notícias do Fortnite
+  // Funções de postagem
   async function postarFortnite() {
     try {
       const feed = await parser.parseURL('https://fortnite.gg/news/rss');
       const noticia = feed.items[0];
       if (!noticia) return;
-
       const frase = frasesFortnite[Math.floor(Math.random() * frasesFortnite.length)];
-
       const embed = {
         title: noticia.title,
         url: noticia.link,
@@ -65,22 +59,16 @@ client.once('ready', () => {
         color: 0x1abc9c,
         image: { url: noticia.enclosure?.url }
       };
-
       canalFortnite?.send({ content: "@everyone " + frase, embeds: [embed] });
-    } catch (err) {
-      console.error('Erro ao buscar Fortnite:', err);
-    }
+    } catch (err) { console.error('Erro ao buscar Fortnite:', err); }
   }
 
-  // Função para postar notícias do LibertyCity (GTA)
   async function postarLibertyCity() {
     try {
       const feed = await parser.parseURL('https://pt.libertycity.net/news/rss');
       const noticia = feed.items[0];
       if (!noticia) return;
-
       const frase = frasesGTA[Math.floor(Math.random() * frasesGTA.length)];
-
       const embed = {
         title: noticia.title,
         url: noticia.link,
@@ -88,22 +76,16 @@ client.once('ready', () => {
         color: 0xe74c3c,
         image: { url: noticia.enclosure?.url }
       };
-
       canalGTA?.send({ content: "@everyone " + frase, embeds: [embed] });
-    } catch (err) {
-      console.error('Erro ao buscar LibertyCity:', err);
-    }
+    } catch (err) { console.error('Erro ao buscar LibertyCity:', err); }
   }
 
-  // Função para postar notícias do Rockstar Newswire (GTA)
   async function postarRockstar() {
     try {
       const feed = await parser.parseURL('https://www.rockstargames.com/br/newswire/rss');
       const noticia = feed.items[0];
       if (!noticia) return;
-
       const frase = frasesGTA[Math.floor(Math.random() * frasesGTA.length)];
-
       const embed = {
         title: noticia.title,
         url: noticia.link,
@@ -111,14 +93,10 @@ client.once('ready', () => {
         color: 0xf1c40f,
         image: { url: noticia.enclosure?.url }
       };
-
       canalGTA?.send({ content: "@everyone " + frase, embeds: [embed] });
-    } catch (err) {
-      console.error('Erro ao buscar Rockstar:', err);
-    }
+    } catch (err) { console.error('Erro ao buscar Rockstar:', err); }
   }
 
-  // Função para postar mensagem fixa às 20:30
   function postarMensagemDiaria() {
     if (canalPromo) {
       const embed = {
@@ -131,50 +109,38 @@ client.once('ready', () => {
     }
   }
 
-  // Função para postar loja do Fortnite às 21:00
   async function postarLojaFortnite() {
     if (canalPromo) {
       try {
         const { data } = await axios.get('https://fortnite.gg/shop');
         const $ = cheerio.load(data);
-
         $('.shop-section .shop-item').each((i, el) => {
           const nome = $(el).find('.shop-item-name').text();
           const preco = $(el).find('.shop-item-price').text();
           const imagem = $(el).find('img').attr('src');
-
           if (!nome || !imagem) return;
-
           const frase = frasesFortnite[Math.floor(Math.random() * frasesFortnite.length)];
-
           const embed = {
             title: nome,
             description: `💰 Preço: ${preco}\n🛒 Use o código **TIOKHREBIS** na loja!`,
             color: 0x2ecc71,
             image: { url: imagem }
           };
-
           canalPromo.send({ content: "@everyone 🛍️ **Loja Fortnite Atualizada!**\n" + frase, embeds: [embed] });
         });
-      } catch (err) {
-        console.error("Erro ao buscar loja Fortnite:", err);
-      }
+      } catch (err) { console.error("Erro ao buscar loja Fortnite:", err); }
     }
   }
 
   // Agendamentos
   setInterval(() => {
     const agora = new Date();
-    if (agora.getHours() === 20 && agora.getMinutes() === 30) {
-      postarMensagemDiaria();
-    }
+    if (agora.getHours() === 20 && agora.getMinutes() === 30) postarMensagemDiaria();
   }, 60000);
 
   setInterval(() => {
     const agora = new Date();
-    if (agora.getHours() === 21 && agora.getMinutes() === 0) {
-      postarLojaFortnite();
-    }
+    if (agora.getHours() === 21 && agora.getMinutes() === 0) postarLojaFortnite();
   }, 60000);
 
   setInterval(postarFortnite, 600000);
@@ -185,16 +151,13 @@ client.once('ready', () => {
 // Interatividade e humor
 client.on('messageCreate', (message) => {
   if (message.author.bot) return;
-
   if (message.content.toLowerCase() === '!piada') {
     const piada = piadas[Math.floor(Math.random() * piadas.length)];
     message.channel.send(piada);
   }
-
   if (message.content.toLowerCase().includes('murilito')) {
     message.reply("👀 Chamou? Eu estava dormindo, mas já acordei!");
   }
-
   if (message.content.toLowerCase().includes('fortnite')) {
     message.react('🛒');
   }
