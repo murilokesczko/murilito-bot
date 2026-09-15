@@ -91,8 +91,6 @@ function limitarTexto(texto, limite = 1900) {
 
 /* =========================================================
    TRADUÇÃO MYMEMORY
-   LIMITE REAL DA API: 500 CARACTERES
-   USAMOS 450 PARA TER MARGEM
 ========================================================= */
 
 async function traduzirMyMemory(texto) {
@@ -134,10 +132,6 @@ async function traduzirMyMemory(texto) {
   }
 }
 
-/*
- * MyMemory aceita no máximo 500 caracteres.
- * Usamos 450 para evitar qualquer problema.
- */
 async function traduzirTextoGrande(texto) {
   const textoOriginal = String(texto || "").trim();
 
@@ -183,20 +177,16 @@ async function traduzirTextoGrande(texto) {
 
     traduzidas.push(traduzida);
 
-    /*
-     * Pequena pausa para não bombardear a API.
-     */
     if (i < partes.length - 1) {
-      await new Promise((resolve) => setTimeout(resolve, 700));
+      await new Promise((resolve) =>
+        setTimeout(resolve, 700)
+      );
     }
   }
 
   return traduzidas.join("\n\n");
 }
 
-/*
- * Mantido para compatibilidade com comandos antigos.
- */
 async function traduzirGoogle(texto) {
   return traduzirMyMemory(texto);
 }
@@ -263,7 +253,11 @@ async function noticiaJaPublicada(canal, link, titulo) {
 
     return false;
   } catch (erro) {
-    console.log("⚠️ Erro verificando duplicada:", erro.message);
+    console.log(
+      "⚠️ Erro verificando duplicada:",
+      erro.message
+    );
+
     return false;
   }
 }
@@ -295,6 +289,7 @@ async function publicarGTA(noticia, forcar = false) {
         console.log(
           `⏭️ GTA: já publicada: ${noticia.titulo}`
         );
+
         return false;
       }
     }
@@ -370,6 +365,7 @@ async function buscarNoticiasRockstar() {
 
       for (const a of links) {
         const href = a.href;
+
         const titulo =
           a.innerText?.trim() ||
           a.textContent?.trim() ||
@@ -471,7 +467,6 @@ async function buscarNoticiasLibertyCity() {
           "";
 
         if (!titulo) continue;
-
         if (vistos.has(href)) continue;
 
         vistos.add(href);
@@ -878,18 +873,10 @@ async function publicarFortnite(
       `📰 Fortnite preparando: ${noticia.titulo}`
     );
 
-    /* =====================================================
-       TRADUZIR TÍTULO
-    ===================================================== */
-
     const tituloTraduzido =
       await traduzirMyMemory(
         noticia.titulo
       );
-
-    /* =====================================================
-       BUSCAR MATÉRIA COMPLETA
-    ===================================================== */
 
     const materia =
       await buscarMateriaCompleta(
@@ -910,20 +897,12 @@ async function publicarFortnite(
         "Confira a matéria completa no link abaixo.";
     }
 
-    /*
-     * Limite prático por notícia.
-     * O texto pode ser enviado em várias mensagens.
-     */
     textoOriginal =
       textoOriginal.slice(0, 15000);
 
     console.log(
       `📖 Texto utilizado: ${textoOriginal.length} caracteres.`
     );
-
-    /* =====================================================
-       TRADUZIR MATÉRIA COMPLETA
-    ===================================================== */
 
     const textoTraduzido =
       await traduzirTextoGrande(
@@ -935,10 +914,6 @@ async function publicarFortnite(
         noticia.titulo,
         textoOriginal
       );
-
-    /* =====================================================
-       MONTAR CABEÇALHO
-    ===================================================== */
 
     let cabecalho =
       "@everyone 📰 **Acabou de sair notícia nova do Fortnite!**\n\n";
@@ -956,16 +931,6 @@ async function publicarFortnite(
 
     cabecalho +=
       "📝 ";
-
-    /*
-     * Reservamos espaço para:
-     * - cabeçalho
-     * - URL
-     * - mensagem final
-     *
-     * A URL também será enviada no primeiro
-     * conteúdo para o Discord gerar a prévia.
-     */
 
     const rodape =
       `\n\n${noticia.link}\n\n` +
@@ -991,9 +956,6 @@ async function publicarFortnite(
       primeiraParte +
       rodape;
 
-    /*
-     * Segurança absoluta contra > 2000.
-     */
     if (
       primeiraMensagem.length > 2000
     ) {
@@ -1031,10 +993,6 @@ async function publicarFortnite(
         parse: ["everyone"],
       },
     });
-
-    /* =====================================================
-       CONTINUAÇÕES
-    ===================================================== */
 
     const restante =
       textoTraduzido.slice(
@@ -1131,6 +1089,204 @@ async function publicarLoja() {
   } catch (erro) {
     console.log(
       "❌ Erro publicando loja:",
+      erro.message
+    );
+
+    return false;
+  }
+}
+
+/* =========================================================
+   TIO KHREBIS
+========================================================= */
+
+const IMAGEM_TIOKHREBIS =
+  "https://cdn.discordapp.com/attachments/1517333302032470191/1548861867429208105/Copilot_20260913_220355.png?ex=6aa94245&is=6aa7f0c5&hm=b3acd2390d58ee0aafd1803b8414bc57db7fe6f185ae1518276376825980be5c";
+
+const FRASES_TIOKHREBIS = [
+  "🎯 Quer ajudar o Tio Khrebis sem gastar nem 1 centavo? Use o código **TIOKHREBIS** na loja! O homem agradece e o café dele também. 😂",
+
+  "😂 O Tio Khrebis não pediu dinheiro... só pediu o código **TIOKHREBIS** na loja. Vamos ajudar o homem!",
+
+  "🫡 Missão do dia: entrar na loja, usar **TIOKHREBIS** e sair como uma pessoa de caráter duvidoso, porém solidária.",
+
+  "💰 Você não perde nada usando **TIOKHREBIS**, mas o Tio Khrebis ganha aquela força! Bora fortalecer o streamer do servidor!",
+
+  "🚨 ATENÇÃO: usar **TIOKHREBIS** na loja pode causar um aumento repentino na felicidade do Tio Khrebis. 😂",
+
+  "🛒 Vai comprar alguma coisa na loja? Então coloca **TIOKHREBIS**. O skin fica mais bonita? Não sabemos. O Tio fica feliz? COM CERTEZA.",
+
+  "🤣 Se você esquecer de usar **TIOKHREBIS**, o Tio Khrebis vai descobrir. E ele tem memória de elefante.",
+
+  "🔥 Uma skin por **TIOKHREBIS** e um Tio Khrebis feliz. Parece um ótimo negócio!",
+
+  "👀 A Epic não paga boleto do Tio Khrebis... mas você pode ajudar usando **TIOKHREBIS** na loja.",
+
+  "😂 Use **TIOKHREBIS** na loja. É grátis, é rápido e evita que o Tio Khrebis tenha que vender o PC.",
+
+  "🎮 O verdadeiro combo do Fortnite: skin bonita + **TIOKHREBIS** + Tio Khrebis feliz.",
+
+  "🫶 Fortaleça quem fortalece o servidor! Na próxima compra da loja, lembra do **TIOKHREBIS**.",
+
+  "🚨 Comunicado oficial: quem usar **TIOKHREBIS** ganha +10 de moral com o Tio Khrebis. Fonte: minha cabeça. 😂",
+
+  "💀 Comprar skin sem colocar **TIOKHREBIS** é igual jogar Fortnite sem construir: dá, mas poderia ser melhor.",
+
+  "🛒 Antes de apertar comprar, respira... lembra do **TIOKHREBIS** e ajuda o homem!",
+
+  "😂 O Tio Khrebis está alimentando o servidor com conteúdo. Agora é nossa vez de alimentar o código **TIOKHREBIS**!",
+
+  "🎯 Seu objetivo: conseguir aquela skin. Nosso objetivo: lembrar você do **TIOKHREBIS**. Todos saem ganhando!",
+
+  "💸 Não custa nada usar **TIOKHREBIS**. Seu dinheiro continua sendo seu. O apoio vai para o Tio!",
+
+  "🤣 Se o Tio Khrebis aparecer no servidor mais feliz que o normal, já sabe: alguém usou **TIOKHREBIS**.",
+
+  "🔥 Quer dar aquela moral para o streamer do servidor? **TIOKHREBIS** na loja e pronto!",
+
+  "🫡 Faça sua parte pela comunidade: compre sua skin e coloque **TIOKHREBIS**. O Tio agradece!",
+
+  "😂 Use **TIOKHREBIS** porque até o Tio precisa de um buff de vez em quando.",
+
+  "🎮 Fortnite te deu uma skin. Você dá um código para o Tio: **TIOKHREBIS**. Equilíbrio universal.",
+
+  "🛒 A loja está bonita, mas fica ainda melhor com **TIOKHREBIS** no campo de apoiador.",
+
+  "🚀 Bora mandar o Tio Khrebis para a estratosfera! Próxima compra: **TIOKHREBIS**!",
+
+  "😂 Não seja aquele jogador que compra a skin e lembra do código depois. **TIOKHREBIS** ANTES!",
+
+  "👑 Código de apoiador do servidor: **TIOKHREBIS**. Use e ajude o homem a continuar criando conteúdo!",
+
+  "💥 Uma pequena ação sua pode dar aquele empurrãozinho no Tio Khrebis. Use **TIOKHREBIS**!",
+
+  "🤣 O Tio Khrebis não tem superpoderes, mas tem código de apoiador: **TIOKHREBIS**!",
+
+  "🛍️ Vai gastar V-Bucks? Então pelo menos faça o Tio sorrir: **TIOKHREBIS**.",
+
+  "🎯 Se essa mensagem apareceu para você, é o universo dizendo: USE **TIOKHREBIS**.",
+
+  "😂 O algoritmo mandou. A consciência pediu. O Tio Khrebis implorou. **TIOKHREBIS**!",
+
+  "🔥 Quer apoiar o streamer do servidor sem abrir a carteira para ele? Use **TIOKHREBIS** na loja!",
+
+  "🫡 Código pequeno, apoio gigante: **TIOKHREBIS**.",
+
+  "🤣 Seu V-Buck já vai embora mesmo... pelo menos deixe um **TIOKHREBIS** pelo caminho.",
+
+  "🎮 Antes de comprar a próxima skin, faça o ritual sagrado: abrir a loja → colocar **TIOKHREBIS** → comprar.",
+
+  "🚨 ALERTA DE UTILIDADE PÚBLICA: não esqueça de colocar **TIOKHREBIS** como código de apoiador!",
+
+  "😂 O Tio Khrebis prometeu não cobrar mensalidade pelo código. Aproveita!",
+
+  "💙 Quem apoia o Tio Khrebis usando **TIOKHREBIS** automaticamente ganha respeito da comunidade. Não temos provas, mas temos fé.",
+
+  "🛒 A skin é sua. O apoio é do Tio. O código é **TIOKHREBIS**. Simples assim!",
+
+  "🔥 Bora fortalecer o homem que fortalece o servidor! **TIOKHREBIS** na loja!",
+
+  "😂 Se você está lendo isso, já demorou demais: salva o código **TIOKHREBIS**.",
+
+  "🎯 Quer fazer uma boa ação hoje? Use **TIOKHREBIS** na sua próxima compra do Fortnite.",
+
+  "🫶 Cada uso do **TIOKHREBIS** é um tapinha nas costas do Tio Khrebis dizendo: continua o trabalho!",
+
+  "💀 Não usar **TIOKHREBIS** não vai te banir... mas vai deixar o Tio olhando para o teto pensando na vida. 😂",
+
+  "🚀 Ajude o Tio Khrebis a subir de nível: **TIOKHREBIS** na loja!",
+
+  "🤣 A skin pode ser lendária, mas usar **TIOKHREBIS** é obrigação moral da comunidade.",
+
+  "🎮 Compra aquela skin que você está namorando e aproveita para colocar **TIOKHREBIS**.",
+
+  "🛒 Código do dia, da semana e provavelmente da próxima década: **TIOKHREBIS**!",
+
+  "👊 Fortaleça o streamer do servidor! Na próxima compra, lembra do nosso homem: **TIOKHREBIS**.",
+];
+
+function obterHoraBrasil() {
+  const partes = new Intl.DateTimeFormat(
+    "pt-BR",
+    {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }
+  ).formatToParts(new Date());
+
+  const resultado = {};
+
+  for (const parte of partes) {
+    if (parte.type !== "literal") {
+      resultado[parte.type] = parte.value;
+    }
+  }
+
+  return resultado;
+}
+
+function obterFraseTioKhrebis() {
+  const indice =
+    Math.floor(
+      Math.random() *
+        FRASES_TIOKHREBIS.length
+    );
+
+  return FRASES_TIOKHREBIS[indice];
+}
+
+async function publicarTioKhrebis() {
+  try {
+    const canal =
+      await client.channels.fetch(
+        ID_LOJA
+      );
+
+    if (!canal) {
+      return false;
+    }
+
+    const frase =
+      obterFraseTioKhrebis();
+
+    const embed =
+      new EmbedBuilder()
+        .setDescription(
+          `🎮 **APOIE O TIO KHREBIS!**\n\n` +
+          `${frase}\n\n` +
+          `🛒 **Código de apoiador: \`TIOKHREBIS\`**\n\n` +
+          `❤️ Use o código **TIOKHREBIS** na loja de itens do Fortnite e fortaleça o streamer do nosso servidor!`
+        )
+        .setImage(
+          IMAGEM_TIOKHREBIS
+        )
+        .setFooter({
+          text:
+            "Murilito NEWS • Apoie o Tio Khrebis",
+        })
+        .setTimestamp();
+
+    await canal.send({
+      content: "@everyone",
+      embeds: [embed],
+      allowedMentions: {
+        parse: ["everyone"],
+      },
+    });
+
+    console.log(
+      "❤️ Divulgação TIOKHREBIS publicada."
+    );
+
+    return true;
+  } catch (erro) {
+    console.log(
+      "❌ Erro publicando TIOKHREBIS:",
       erro.message
     );
 
@@ -1369,10 +1525,12 @@ async function executarTesteRockstar(
       return;
     }
 
-    for (const noticia of noticias.slice(
-      0,
-      2
-    )) {
+    for (
+      const noticia of noticias.slice(
+        0,
+        2
+      )
+    ) {
       await publicarGTA(
         noticia,
         true
@@ -1409,10 +1567,12 @@ async function executarTesteLiberty(
       return;
     }
 
-    for (const noticia of noticias.slice(
-      0,
-      2
-    )) {
+    for (
+      const noticia of noticias.slice(
+        0,
+        2
+      )
+    ) {
       await publicarGTA(
         noticia,
         true
@@ -1505,6 +1665,7 @@ async function executarAjuda(
       "`!teste fortnite` → testa RSS + matéria + tradução\n" +
       "`!teste loja` → testa loja Fortnite\n" +
       "`!teste traducao` → testa MyMemory\n" +
+      "`!codigo` → publica divulgação do código TIOKHREBIS\n" +
       "`!piada` → manda uma piada\n" +
       "`!ajuda` → mostra esta mensagem"
   );
@@ -1608,6 +1769,20 @@ client.on(
         await executarTesteLoja(
           mensagem
         );
+
+        return;
+      }
+
+      /*
+       * NOVO:
+       * !codigo publica imediatamente
+       * a divulgação do Tio Khrebis.
+       */
+      if (
+        conteudo ===
+        "!codigo"
+      ) {
+        await publicarTioKhrebis();
 
         return;
       }
@@ -1744,39 +1919,114 @@ client.once(
     );
 
     /*
-     * Verifica a loja a cada minuto.
-     * Publica às 21:00.
+     * =====================================================
+     * AGENDADOR
+     *
+     * 20:30 → TIOKHREBIS
+     * 21:00 → LOJA FORTNITE
+     * 22:00 → TIOKHREBIS
+     *
+     * Horário oficial:
+     * America/Sao_Paulo
+     * =====================================================
      */
+
     let ultimaPublicacaoLoja = "";
+    let ultimaPublicacaoTio2030 = "";
+    let ultimaPublicacaoTio2200 = "";
 
     setInterval(
       async () => {
         try {
           const agora =
-            new Date();
+            obterHoraBrasil();
+
+          const ano =
+            agora.year;
+
+          const mes =
+            agora.month;
+
+          const dia =
+            agora.day;
 
           const hora =
-            agora.getHours();
+            agora.hour;
 
           const minuto =
-            agora.getMinutes();
+            agora.minute;
 
-          const chave =
-            `${agora.getFullYear()}-${agora.getMonth()}-${agora.getDate()}-${hora}`;
+          const dataHoje =
+            `${ano}-${mes}-${dia}`;
+
+          /*
+           * ===============================================
+           * 20:30 — TIO KHREBIS
+           * ===============================================
+           */
 
           if (
-            hora === 21 &&
-            minuto === 0 &&
-            ultimaPublicacaoLoja !== chave
+            hora === "20" &&
+            minuto === "30" &&
+            ultimaPublicacaoTio2030 !==
+              dataHoje
+          ) {
+            ultimaPublicacaoTio2030 =
+              dataHoje;
+
+            console.log(
+              "🕣 Horário 20:30 — publicando TIOKHREBIS..."
+            );
+
+            await publicarTioKhrebis();
+          }
+
+          /*
+           * ===============================================
+           * 21:00 — LOJA FORTNITE
+           * ===============================================
+           */
+
+          if (
+            hora === "21" &&
+            minuto === "00" &&
+            ultimaPublicacaoLoja !==
+              dataHoje
           ) {
             ultimaPublicacaoLoja =
-              chave;
+              dataHoje;
+
+            console.log(
+              "🕘 Horário 21:00 — publicando loja Fortnite..."
+            );
 
             await publicarLoja();
           }
+
+          /*
+           * ===============================================
+           * 22:00 — TIO KHREBIS
+           * ===============================================
+           */
+
+          if (
+            hora === "22" &&
+            minuto === "00" &&
+            ultimaPublicacaoTio2200 !==
+              dataHoje
+          ) {
+            ultimaPublicacaoTio2200 =
+              dataHoje;
+
+            console.log(
+              "🕙 Horário 22:00 — publicando TIOKHREBIS..."
+            );
+
+            await publicarTioKhrebis();
+          }
         } catch (erro) {
           console.log(
-            "❌ Erro no verificador da loja:",
+            "❌ Erro no agendador:",
             erro.message
           );
         }
